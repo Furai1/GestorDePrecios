@@ -1,0 +1,3217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Precios Multimoneda</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <meta name="theme-color" content="#1e40af">
+    <link rel="manifest" href="manifest.json?v=3">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
+        /* Evitar scroll del fondo cuando un modal está abierto */
+        body.modal-open { overflow: hidden; }
+        .table-container::-webkit-scrollbar { height: 8px; }
+        .table-container::-webkit-scrollbar-thumb { background-color: #94a3b8; border-radius: 4px; }
+        .flash-success { animation: flash-success-animation 1.5s ease-out; }
+        @keyframes flash-success-animation { 0% { background-color: #dcfce7; } 100% { background-color: transparent; } }
+        button svg, .icon-div svg { pointer-events: none; }
+        .modal { transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out; }
+        .modal-content { transition: transform 0.2s ease-in-out; }
+        .modal.is-open { visibility: visible; opacity: 1; }
+        .modal.is-open .modal-content { transform: translateY(0) scale(1); }
+        #filter-chevron { transition: transform 0.3s ease; }
+        #filter-grid { transition: max-height 0.3s ease-in-out; }
+        @keyframes shake-animation {
+          10%, 90% { transform: translate3d(-1px, 0, 0); }
+          20%, 80% { transform: translate3d(2px, 0, 0); }
+          30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+          40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+        .form-error-shake {
+          animation: shake-animation 0.6s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        /* Dark mode - refined palette for readability across the app */
+        body.dark { background-color: #071226; color: #e6eef8; }
+        body.dark header { background-color: #082036; color: #e6eef8; }
+
+        /* Cards, panels and surfaces */
+        body.dark .bg-white, body.dark .bg-slate-50, body.dark .modal-content { background-color: #071226 !important; color: #e6eef8; }
+        body.dark #app-menu { background-color: #0b2233 !important; color: #dbeafe; }
+
+        /* Text palettes */
+        body.dark .text-slate-500 { color: #9fb6d8 !important; }
+        body.dark .text-slate-600 { color: #9fb6d8 !important; }
+        body.dark .text-slate-700 { color: #d7ecff !important; }
+        body.dark .text-slate-800 { color: #e6eef8 !important; }
+
+        /* Borders and dividers */
+        body.dark .border-slate-200, body.dark .border-slate-300 { border-color: #163040 !important; }
+        body.dark .divide-slate-200 { --tw-divide-opacity: 1 !important; border-color: rgba(255,255,255,0.04) !important; }
+
+        /* Inputs / selects / placeholders */
+        body.dark input, body.dark select, body.dark textarea { background-color: #0b2233 !important; color: #e6eef8 !important; border-color: #113244 !important; }
+        body.dark input::placeholder, body.dark textarea::placeholder { color: #7ea6c8 !important; }
+
+        /* Buttons and interactive elements */
+    body.dark button { color: #dbeafe; background-color: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.06); }
+    /* Forzar botones de confirmación en verde también en modo oscuro */
+    body.dark .btn-confirm { background-color: #16a34a !important; color: #ffffff !important; border-color: rgba(255,255,255,0.06) !important; }
+    body.dark .btn-confirm:hover { background-color: #15803d !important; }
+        body.dark .bg-white.text-blue-800 { color: #93c5fd !important; }
+        body.dark .p-2, body.dark .p-3 { background-color: transparent; }
+
+    /* Badges / category pills */
+        body:not(.dark) .px-2.py-1.text-xs, body:not(.dark) span.px-2.py-1.text-xs, body:not(.dark) div.px-2.py-1.text-xs {
+            background-color: #eff6ff !important;
+            color: #1e40af !important;
+            border-color: #bfdbfe !important;
+        }
+    body.dark .px-2.py-1.text-xs { background-color: rgba(255,255,255,0.03) !important; color: #cfefff !important; }
+    body.dark .px-2.py-1.text-xs { background-color: rgba(255,255,255,0.03) !important; color: #cfefff !important; }
+
+        /* Table header and rows */
+        body.dark thead { background-color: rgba(255,255,255,0.03); }
+        body.dark thead th { color: #dbeafe !important; }
+        body.dark tbody tr { border-bottom-color: rgba(255,255,255,0.03); }
+        body.dark tbody tr:hover { background-color: rgba(255,255,255,0.02); }
+        body.dark .price-text { color: #7dd3fc !important; }
+
+        /* Icons (SVGs using currentColor will adapt) */
+        body.dark svg { color: inherit; }
+
+        /* Modals overlay and shadows */
+        body.dark .shadow-md { box-shadow: 0 8px 30px rgba(2,6,23,0.6); }
+
+        /* Small tweak for export/import buttons contrast */
+        body.dark #export-btn, body.dark #export-with-photos-btn, body.dark #import-btn { background-color: rgba(255,255,255,0.03); color: #dbeafe; border-color: rgba(255,255,255,0.06); }
+
+        /* Ensure focus rings are visible */
+        body.dark :focus { outline: 2px solid rgba(125,211,252,0.12); outline-offset: 2px; }
+
+    /* Pagination / small controls */
+    body.dark .bg-slate-100 { background-color: #072233 !important; color: #dbeafe !important; }
+    body.dark .bg-slate-200 { background-color: #08283a !important; }
+
+    /* Suggestion dropdowns and list hover */
+    body.dark .shadow-lg { background-color: #071226 !important; }
+    body.dark .hover\:bg-slate-100:hover, body.dark .hover\:bg-slate-200:hover { background-color: rgba(255,255,255,0.02) !important; }
+
+    /* Add product button (consistent green across themes) */
+    #add-product-btn { background-color: #16a34a; color: #ffffff; border: 1px solid rgba(15,23,42,0.08); }
+    #add-product-btn:hover { background-color: #15803d; }
+    #add-product-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(52,211,153,0.35); }
+    #add-product-btn svg { color: #ffffff; }
+    body.dark #add-product-btn { background-color: #16a34a !important; color: #ffffff !important; border-color: rgba(255,255,255,0.14) !important; }
+    body.dark #add-product-btn:hover { background-color: #15803d !important; }
+    body.dark #add-product-btn:focus-visible { box-shadow: 0 0 0 3px rgba(52,211,153,0.45); }
+    body.dark #add-product-btn svg { color: #ffffff !important; }
+
+    /* Suggestion boxes */
+    body.dark .z-10.bg-white { background-color: #071226 !important; color: #dbeafe !important; border-color: #113244 !important; }
+
+    /* Disabled look clarity */
+    body.dark .cursor-not-allowed, body.dark button[disabled] { opacity: 0.5; filter: grayscale(0.1); }
+
+        /* Mobile helpers */
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    /* (revert) No forcing word-break/overflow-wrap on table cells */
+
+    /* Forces a light background for the app menu in light mode while preserving the
+       dark background when the page has the `dark` class. This ensures the menu
+       visually matches the light theme and remains distinct from the main UI. */
+    #app-menu-sidebar, #app-menu-bottom {
+        background-color: #f8fafc; /* slate-50 */
+        color: #0f172a; /* slate-900 */
+        border-color: #e6eef8;
+    }
+    /* Dark-mode overrides (higher specificity to avoid Tailwind utility clashes) */
+    body.dark #app-menu-sidebar,
+    body.dark #app-menu-bottom {
+        background-color: #0b2233 !important;
+        color: #dbeafe !important;
+        border-color: #163040 !important;
+    }
+    /* Dark-mode: refine menu item appearance for better spacing and hover */
+    body.dark #app-menu-sidebar button,
+    body.dark #app-menu-bottom button {
+        color: #cfefff !important;
+        background-color: transparent !important;
+        border-radius: 0.5rem; /* pill-like items */
+        padding-left: .75rem !important;
+        padding-right: .75rem !important;
+        transition: background-color .14s ease, color .14s ease, transform .08s ease;
+    }
+    body.dark #app-menu-sidebar button:hover,
+    body.dark #app-menu-bottom button:hover,
+    body.dark #app-menu-sidebar button:focus,
+    body.dark #app-menu-bottom button:focus {
+        background-color: rgba(255,255,255,0.03) !important; /* subtle lift */
+        color: #e6f6ff !important;
+        transform: translateY(-1px);
+    }
+    body.dark #app-menu-sidebar button:active,
+    body.dark #app-menu-bottom button:active {
+        background-color: rgba(255,255,255,0.05) !important;
+        transform: translateY(0);
+    }
+    /* Dark-mode small headers and labels (brighter) */
+    body.dark #app-menu-sidebar .text-sm,
+    body.dark #app-menu-bottom .text-sm {
+        color: #cfefff !important; /* Brighter blue-ish white */
+    }
+    body.dark #app-menu-sidebar .text-xs,
+    body.dark #app-menu-bottom .text-xs {
+        color: #cfefff !important; /* Brighter blue-ish white to match user request */
+    }
+    /* Backdrop opacity tuned for both modes */
+    #app-menu-backdrop { background-color: rgba(0,0,0,0.36); }
+
+    /* Force readable text color for menu items in light mode. We use
+       element selectors with the menu IDs to increase specificity over
+       utility classes so buttons/labels are clearly visible. */
+    #app-menu-sidebar button,
+    #app-menu-sidebar .text-sm,
+    #app-menu-sidebar .text-xs,
+    #app-menu-bottom button,
+    #app-menu-bottom .text-sm,
+    #app-menu-bottom .text-xs {
+        color: #0f172a !important; /* slate-900 */
+        opacity: 1 !important;
+    }
+
+    /* Switch (toggle) styles for dark mode controls in the menu */
+    .switch-label { display: block; width: 48px; height: 26px; border-radius: 9999px; background: #eef3f8; position: relative; cursor: pointer; border: 1px solid rgba(15,23,42,0.04); }
+    .switch-label .switch-dot { position: absolute; width: 20px; height: 20px; top: 3px; left: 3px; background: #ffffff; border-radius: 9999px; transition: transform .16s cubic-bezier(.2,.9,.2,1), background .12s ease; box-shadow: 0 4px 10px rgba(2,6,23,0.08); }
+    input.sr-only:checked + .switch-label { background: #2563eb !important; border-color: rgba(37,99,235,0.8); }
+    input.sr-only:checked + .switch-label .switch-dot { transform: translateX(22px); background: #ffffff; box-shadow: 0 6px 14px rgba(37,99,235,0.18); }
+    /* Dark-mode track adjustments (refined) */
+    body.dark input.sr-only + .switch-label { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.04); }
+    body.dark input.sr-only:checked + .switch-label { background: #2563eb !important; border-color: rgba(37,99,235,0.9); }
+    body.dark input.sr-only + .switch-label .switch-dot { background: #071226; }
+    body.dark input.sr-only:checked + .switch-label .switch-dot { background: #ffffff; }
+    /* focus-visible for keyboard users */
+    input.sr-only:focus + .switch-label { box-shadow: 0 0 0 4px rgba(37,99,235,0.12); }
+
+    /* Light-mode only: refine hover/focus/active so the highlight is subtle and
+       the text doesn't become too dark. Using body:not(.dark) increases
+       specificity and prevents interference with dark mode rules. */
+    body:not(.dark) #app-menu-sidebar button,
+    body:not(.dark) #app-menu-bottom button {
+        transition: background-color .14s ease, color .14s ease;
+    }
+
+    body:not(.dark) #app-menu-sidebar button:hover,
+    body:not(.dark) #app-menu-bottom button:hover,
+    body:not(.dark) #app-menu-sidebar button:focus,
+    body:not(.dark) #app-menu-bottom button:focus {
+        background-color: #eef3f8 !important; /* subtle light blue-gray */
+        color: #0b1720 !important; /* solid dark slate, but not pure black */
+    }
+
+    body:not(.dark) #app-menu-sidebar button:active,
+    body:not(.dark) #app-menu-bottom button:active {
+        background-color: #e6edf5 !important;
+    }
+
+    /* Light-mode icon color: ensure icons are dark and readable */
+    body:not(.dark) #app-menu-sidebar svg,
+    body:not(.dark) #app-menu-bottom svg {
+        color: #0f172a !important; /* slate-900 */
+    }
+        /* Sort menu button - light mode tweaks */
+        body:not(.dark) #sort-menu-btn {
+            background-color: #f1f5f9; /* slate-100 */
+            color: #0f172a; /* slate-900 */
+            border-color: #cbd5e1; /* slate-300 */
+        }
+        body:not(.dark) #sort-menu-btn:hover { background-color: #e2e8f0; /* slate-200 */ }
+
+        /* Sort dropdown palette */
+        #sort-menu {
+            background-color: #ffffff; /* light */
+            color: #0f172a; /* slate-900 */
+            border-color: #e2e8f0; /* slate-200 */
+        }
+        #sort-menu .text-xs,
+        #sort-menu .text-sm { color: #0f172a; }
+        #sort-menu label:hover { background-color: #f1f5f9; /* slate-100 */ }
+        #sort-menu input[type="radio"] { accent-color: #2563eb; }
+
+        body.dark #sort-menu {
+            background-color: #0b2233 !important;
+            color: #dbeafe !important;
+            border-color: #163040 !important;
+        }
+        body.dark #sort-menu .text-xs,
+        body.dark #sort-menu .text-sm { color: #cfefff !important; }
+        body.dark #sort-menu label:hover { background-color: rgba(255,255,255,0.03) !important; }
+
+        /* Toasts */
+        .toast { 
+            display: flex; align-items: center; gap: .5rem; 
+            background: #0f172a; color: #ffffff; 
+            padding: .75rem .9rem; border-radius: .5rem; 
+            box-shadow: 0 8px 24px rgba(2,6,23,.18); 
+            transform: translateY(12px); opacity: 0; 
+            transition: transform .18s ease, opacity .18s ease; 
+            pointer-events: auto;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast-success { background: #16a34a; }
+        .toast-info { background: #334155; }
+        .toast .toast-icon { width: 18px; height: 18px; opacity: .95; }
+        body.dark .toast { background: #0b2233; color: #dbeafe; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+        body.dark .toast-success { background: #15803d; color: #eafff2; }
+        body.dark .toast-info { background: #0f2a3d; color: #dbeafe; }
+
+    /* Resaltado de coincidencias (claro/oscuro) */
+    .highlight { background-color: #fde68a; /* amber-200 */ color: #0f172a; /* slate-900 */ padding: 0 .06em; border-radius: .18rem; }
+    body.dark .highlight { background-color: rgba(59,130,246,0.35); /* blue-500 @ 35% */ color: #e6eef8; }
+    /* En badges y listas, evitar que el fondo se vea muy fuerte */
+    .badge .highlight { background-color: rgba(59,130,246,0.22); }
+
+        /* Clear-all modal icon: improve contrast on dark mode */
+    body.dark #clear-all-modal .warning-icon { color: #fca5a5 !important; } /* red-300 */
+    body:not(.dark) #clear-all-modal .warning-icon { color: #b91c1c; } /* red-700 */
+
+
+
+        body.dark .form-radio {
+            background-color: #0b2233;
+            border-color: #113244;
+        }
+        body.dark .form-radio:checked {
+            background-color: #2563eb;
+            border-color: #2563eb;
+        }
+        body.dark .form-radio:focus {
+            --tw-ring-color: rgba(37, 99, 235, 0.5);
+        }
+
+    /* X personalizada para la barra Nombre/Código: igual aspecto que la nativa y visible sin foco */
+    /* Ocultar la X nativa para evitar duplicados */
+    #search-name-code::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+    /* Estilo del icono personalizado (usa currentColor) */
+    #clear-search-name-code { color: #3b82f6; /* blue-500 */ opacity: .9; }
+    #clear-search-name-code:hover { opacity: 1; }
+    body.dark #clear-search-name-code { color: #60a5fa; /* blue-400 */ }
+    body.dark #clear-search-name-code:hover { background-color: rgba(255,255,255,0.08); }
+
+    /* Botón destacado para seleccionar marca (claro y oscuro) */
+    .btn-accent { background-color: #eff6ff; /* blue-50 */ color: #1e40af; /* blue-800 */ border-color: #bfdbfe; /* blue-200 */ }
+    .btn-accent:hover { background-color: #dbeafe; /* blue-100 */ }
+    body.dark .btn-accent { background-color: rgba(29,78,216,0.20); /* blue-700 @ 20% */ color: #93c5fd; /* blue-300 */ border-color: rgba(147,197,253,0.40); /* blue-300 @ 40% */ }
+    body.dark .btn-accent:hover { background-color: rgba(29,78,216,0.30); }
+
+    /* Botón de acción "peligro" para limpiar filtros (claro y oscuro) */
+    .btn-danger { background-color: #ef4444; /* red-500 */ color: #ffffff; border-color: rgba(0,0,0,0.06); }
+    .btn-danger:hover { background-color: #dc2626; /* red-600 */ }
+    body.dark .btn-danger { background-color: #dc2626 !important; /* red-600 */ color: #ffffff !important; border-color: rgba(255,255,255,0.06) !important; }
+    body.dark .btn-danger:hover { background-color: #b91c1c !important; /* red-700 */ }
+
+    /* Botón con contorno visible en claro y oscuro */
+    .btn-outline { background-color: transparent; border: 1px solid #cbd5e1; color: inherit; }
+    .btn-outline:hover { background-color: #f8fafc; }
+    .btn-outline:focus { outline: none; box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+    body.dark .btn-outline { background-color: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.08); }
+    body.dark .btn-outline:hover { background-color: rgba(255,255,255,0.04); }
+    body.dark .btn-outline:focus { outline: none; box-shadow: 0 0 0 3px rgba(96,165,250,0.12); }
+
+    /* Botón de eliminar en la tabla (claro y oscuro) */
+    .btn-delete { background-color: #ef4444; color: #ffffff; }
+    .btn-delete:hover { background-color: #dc2626; }
+    .btn-delete:focus-visible { outline: none; }
+    body.dark .btn-delete { background-color: #dc2626 !important; color: #ffffff !important; }
+    body.dark .btn-delete:hover { background-color: #b91c1c !important; }
+
+    /* Estilos de tabla personalizables */
+    table.table-compact th, table.table-compact td { padding: 0.5rem 0.75rem !important; font-size: 0.875rem; }
+    table.table-bordered { border-collapse: collapse; }
+    table.table-bordered th, table.table-bordered td { border: 1px solid #e2e8f0; }
+    body.dark table.table-bordered th, body.dark table.table-bordered td { border-color: #1e293b; }
+    table.table-striped tbody tr:nth-child(odd) { background-color: #f8fafc; }
+    body.dark table.table-striped tbody tr:nth-child(odd) { background-color: rgba(255,255,255,0.025); }
+    /* Ajuste para que el hover se note sobre el striped */
+    table.table-striped tbody tr:hover { background-color: #f1f5f9; }
+    body.dark table.table-striped tbody tr:hover { background-color: rgba(255,255,255,0.05); }
+
+    </style>
+</head>
+<body class="antialiased text-slate-800">
+
+    <div id="app" class="min-h-screen flex flex-col">
+    <header class="bg-blue-800 text-white shadow-md z-20 p-4">
+            <!-- Menu de opciones (esquina superior izquierda) -->
+            <!-- El botón del menú fue movido junto al ícono en el encabezado; el overlay permanece aquí. -->
+                    <!-- Responsive app menu: desktop sidebar and mobile bottom sheet -->
+                    <div id="app-menu-overlay" class="hidden fixed inset-0 z-50">
+                        <div id="app-menu-backdrop" class="absolute inset-0 bg-black bg-opacity-40"></div>
+
+                        <!-- Desktop sidebar (slides from left) -->
+                        <aside id="app-menu-sidebar" class="fixed top-0 left-0 h-full w-72 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 border-r border-slate-200 dark:border-slate-800 shadow-lg transform -translate-x-full transition-transform duration-300 ease-in-out">
+                            <div class="h-full flex flex-col">
+                                <div class="p-4 border-b flex items-start justify-between gap-2">
+                                    <div>
+                                        <div class="text-sm font-semibold">Gestor de Precios</div>
+                                        <div class="text-xs text-slate-500">v3</div>
+                                    </div>
+                                    <button id="app-menu-close-btn" aria-label="Cerrar menú" class="ml-2 p-2 rounded-md text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300"> 
+                                        <!-- X icon -->
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                    </button>
+                                </div>
+                                <div class="p-4 flex-1 overflow-y-auto">
+                                    <!-- Los botones de acción principales ya están en la barra superior; para evitar duplicados dejamos el menú más limpio -->
+                                    <nav class="space-y-2">
+                                        <div class="text-sm text-slate-600 dark:text-slate-300 px-3 py-2">Acciones</div>
+                                        <button id="install-btn" class="hidden w-full text-left px-3 py-2 rounded-md text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">
+                                            <span class="inline-flex items-center gap-3">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 dark:text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v13"/><path d="M5 12l7-7 7 7"/><path d="M21 21H3"/></svg>
+                                                <span>Instalar</span>
+                                            </span>
+                                        </button>
+                                        <button id="export-btn" class="w-full text-left px-3 py-2 rounded-md text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">
+                                            <span class="inline-flex items-center gap-3">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 dark:text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 5 17 10"/><line x1="12" y1="5" x2="12" y2="19"/></svg>
+                                                <span>Exportar</span>
+                                            </span>
+                                        </button>
+                                        <button id="import-btn" class="w-full text-left px-3 py-2 rounded-md text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">
+                                            <span class="inline-flex items-center gap-3">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 dark:text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/></svg>
+                                                <span>Importar</span>
+                                            </span>
+                                        </button>
+                                        <button id="clear-all-btn" class="w-full text-left px-3 py-2 rounded-md text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-white/10">
+                                            <span class="inline-flex items-center gap-3">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                                <span>Eliminar todos</span>
+                                            </span>
+                                        </button>
+                                        <input id="import-file" type="file" accept="application/json,.json" class="hidden" />
+                                    </nav>
+                                </div>
+                                <div class="p-4 border-t space-y-4">
+                                    <div class="flex items-center justify-between">
+                                        <div class="text-sm flex items-center gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-600 dark:text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                                            <span>Modo oscuro</span>
+                                        </div>
+                                        <div>
+                                            <input type="checkbox" id="opt-dark-mode" class="sr-only" />
+                                            <label for="opt-dark-mode" class="switch-label" aria-hidden="true">
+                                                <span class="switch-dot"></span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">Diseño de tabla</div>
+                                        <div class="space-y-2">
+                                            <label class="flex items-center justify-between cursor-pointer group">
+                                                <span class="text-sm text-slate-700 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Compacta</span>
+                                                <input type="checkbox" id="opt-table-compact" class="form-checkbox h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:checked:bg-blue-600 transition">
+                                            </label>
+                                            <label class="flex items-center justify-between cursor-pointer group">
+                                                <span class="text-sm text-slate-700 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Bordes</span>
+                                                <input type="checkbox" id="opt-table-bordered" class="form-checkbox h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:checked:bg-blue-600 transition">
+                                            </label>
+                                            <label class="flex items-center justify-between cursor-pointer group">
+                                                <span class="text-sm text-slate-700 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Filas alternas</span>
+                                                <input type="checkbox" id="opt-table-striped" class="form-checkbox h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:checked:bg-blue-600 transition">
+                                            </label>
+                                            <label class="flex items-center justify-between cursor-pointer group">
+                                                <span class="text-sm text-slate-700 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Mostrar fotos en lista</span>
+                                                <input type="checkbox" id="opt-show-thumbs" class="form-checkbox h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:checked:bg-blue-600 transition">
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </aside>
+
+                        <!-- Mobile bottom sheet (slides from bottom to ~50% height) -->
+                        <div id="app-menu-bottom" class="fixed left-0 right-0 bottom-0 h-[50vh] max-h-[80vh] bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-t-2xl ring-1 ring-slate-100 dark:ring-0 shadow-lg transform translate-y-full transition-transform duration-300 ease-in-out">
+                            <div class="w-full flex justify-center p-3">
+                                <div id="bottom-sheet-handle" class="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full"></div>
+                            </div>
+                            <div class="p-4 overflow-y-auto h-[calc(50vh-48px)]">
+                                <div class="text-sm font-semibold mb-2">Gestor de Precios — v3</div>
+                                <div class="space-y-2">
+                                    <!-- Mobile action buttons (same actions as desktop) -->
+                                    <button id="menu-bottom-install" class="hidden w-full text-left px-3 py-2 rounded-md text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">
+                                        <span class="inline-flex items-center gap-3">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 dark:text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v13"/><path d="M5 12l7-7 7 7"/><path d="M21 21H3"/></svg>
+                                            <span>Instalar</span>
+                                        </span>
+                                    </button>
+                                    <button id="menu-bottom-export" class="w-full text-left px-3 py-2 rounded-md text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">
+                                        <span class="inline-flex items-center gap-3">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 dark:text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 5 17 10"/><line x1="12" y1="5" x2="12" y2="19"/></svg>
+                                            <span>Exportar</span>
+                                        </span>
+                                    </button>
+                                    <button id="menu-bottom-import" class="w-full text-left px-3 py-2 rounded-md text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">
+                                        <span class="inline-flex items-center gap-3">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-500 dark:text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/></svg>
+                                            <span>Importar</span>
+                                        </span>
+                                    </button>
+                                    <button id="menu-bottom-clear-all" class="w-full text-left px-3 py-2 rounded-md text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-white/10">
+                                        <span class="inline-flex items-center gap-3">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                            <span>Eliminar todos</span>
+                                        </span>
+                                    </button>
+                                </div>
+                                <div class="mt-4 border-t pt-3 space-y-4">
+                                    <div class="flex items-center justify-between">
+                                        <div class="text-sm">Modo oscuro</div>
+                                        <div>
+                                            <input type="checkbox" id="opt-dark-mode-bottom" class="sr-only" />
+                                            <label for="opt-dark-mode-bottom" class="switch-label" aria-hidden="true">
+                                                <span class="switch-dot"></span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">Diseño de tabla</div>
+                                        <div class="space-y-2">
+                                            <label class="flex items-center justify-between cursor-pointer group">
+                                                <span class="text-sm text-slate-700 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Compacta</span>
+                                                <input type="checkbox" id="opt-table-compact-bottom" class="form-checkbox h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:checked:bg-blue-600 transition">
+                                            </label>
+                                            <label class="flex items-center justify-between cursor-pointer group">
+                                                <span class="text-sm text-slate-700 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Bordes</span>
+                                                <input type="checkbox" id="opt-table-bordered-bottom" class="form-checkbox h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:checked:bg-blue-600 transition">
+                                            </label>
+                                            <label class="flex items-center justify-between cursor-pointer group">
+                                                <span class="text-sm text-slate-700 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Filas alternas</span>
+                                                <input type="checkbox" id="opt-table-striped-bottom" class="form-checkbox h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:checked:bg-blue-600 transition">
+                                            </label>
+                                            <label class="flex items-center justify-between cursor-pointer group">
+                                                <span class="text-sm text-slate-700 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Mostrar fotos en lista</span>
+                                                <input type="checkbox" id="opt-show-thumbs-bottom" class="form-checkbox h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:checked:bg-blue-600 transition">
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+            <div class="container mx-auto max-w-7xl flex flex-row flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-3 justify-start flex-shrink-0">
+                    <button id="app-menu-btn" aria-haspopup="true" aria-expanded="false" class="bg-slate-100 text-slate-800 dark:bg-white/10 dark:text-white border border-slate-200 dark:border-white/30 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-white/30">☰</button>
+                    <div class="flex items-center gap-2">
+                        <img src="icons/icon-192.png" alt="Gestor de Precios" class="h-9 w-9 rounded-md" />
+                        <span class="sr-only">Gestor de Precios</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 w-auto flex-wrap justify-end ml-auto">
+                <button id="update-app-btn" class="bg-green-700 text-white font-semibold py-2 px-3 rounded-md hover:bg-green-800 transition hidden whitespace-nowrap">Actualizar app</button>
+                <button id="add-product-btn" class="btn-confirm bg-green-600 text-white font-semibold py-2 px-4 rounded-md shadow hover:bg-green-700 transition flex items-center gap-2 whitespace-nowrap focus-visible:outline-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span class="inline">Añadir Producto</span>
+                </button>
+                </div>
+            </div>
+        </header>
+
+    <div class="bg-slate-50 border-b border-slate-200 z-10 p-4">
+            <div class="container mx-auto max-w-7xl">
+                <div class="mb-4 grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div>
+                        <label for="search-code" class="block text-sm font-medium text-slate-600 mb-1">Buscar por código</label>
+                        <div class="relative">
+                            <input type="search" id="search-code" placeholder="Código..." class="w-full p-2 pr-9 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500">
+                            <button type="button" id="clear-search-code" aria-label="Limpiar búsqueda código" class="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 grid place-items-center rounded-full hover:bg-slate-200 dark:hover:bg-white/10 transition hidden">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="search-name" class="block text-sm font-medium text-slate-600 mb-1">Buscar por nombre</label>
+                        <div class="relative">
+                            <input type="search" id="search-name" placeholder="Nombre..." class="w-full p-2 pr-9 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500">
+                            <button type="button" id="clear-search-name" aria-label="Limpiar búsqueda nombre" class="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 grid place-items-center rounded-full hover:bg-slate-200 dark:hover:bg-white/10 transition hidden">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="relative col-span-2 md:col-span-1">
+                        <label for="search-brand" class="block text-sm font-medium text-slate-600 mb-1">Buscar por marca</label>
+                        <div class="flex items-center gap-2">
+                            <!-- Campo oculto que almacena el filtro actual de marca -->
+                            <input type="hidden" id="search-brand" value="">
+                            <button id="brand-list-btn" type="button" class="btn-accent inline-flex items-center gap-2 shrink-0 px-3 py-2 rounded-md border transition">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M20.59 13.41L11 3H4v7l9.59 9.59a2 2 0 0 0 2.83 0l4.17-4.17a2 2 0 0 0 0-2.83z"></path>
+                                    <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                                </svg>
+                                <span>Marcas</span>
+                            </button>
+                            <span id="brand-selected-label" class="text-sm text-slate-600">Ninguna</span>
+                            <!-- Chip integrado con la marca seleccionada + X para limpiar -->
+                <button id="brand-chip" type="button" aria-label="Quitar marca seleccionada" title="Quitar marca"
+                    class="hidden inline-flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-sm transition focus:outline-none focus:ring-2 focus:ring-blue-400/40 dark:bg-white/5 dark:text-blue-300 dark:border-white/10 dark:hover:bg-white/10"
+                    style="background-color: #eff6ff !important; color: #1e40af !important; border-color: #bfdbfe !important;">
+                                <span id="brand-chip-text" class="text-sm font-medium"></span>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <button id="toggle-filters-btn" class="btn-outline flex justify-between items-center w-full p-2 rounded-md hover:bg-slate-200 transition" aria-expanded="false" aria-controls="filter-grid">
+                    <h3 class="text-lg font-semibold text-slate-700">Filtrar por</h3>
+                    <svg id="filter-chevron" class="w-6 h-6 text-slate-600 transition-transform duration-300" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <div id="filter-grid" class="overflow-hidden max-h-0 transition-all duration-300">
+                        <div class="pt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="md:col-span-1 relative">
+                            <label for="category-filter" class="block text-sm font-medium text-slate-600 mb-1">Categoría</label>
+                            <input id="category-filter" type="text" placeholder="Todas" class="w-full p-2 border border-slate-300 rounded-md" autocomplete="off" />
+                            <div id="category-filter-suggestions" class="absolute left-0 right-0 mt-1 bg-white z-10 rounded-md shadow-lg hidden max-h-40 overflow-y-auto"></div>
+                        </div>
+                        <div class="md:col-span-1"><label for="currency-filter" class="block text-sm font-medium text-slate-600 mb-1">Moneda</label><select id="currency-filter" class="w-full p-2 border border-slate-300 rounded-md"><option value="all">Todas</option></select></div>
+                        <fieldset class="md:col-span-2">
+                            <legend class="block text-sm font-medium text-slate-600 mb-1">Rango de precio</legend>
+                            <div class="flex gap-3">
+                                <input type="number" id="min-price" placeholder="Desde..." min="0" class="w-full p-2 border border-slate-300 rounded-md" />
+                                <span class="self-center text-slate-500">—</span>
+                                <input type="number" id="max-price" placeholder="Hasta..." min="0" class="w-full p-2 border border-slate-300 rounded-md" />
+                            </div>
+                        </fieldset>
+                        <div class="md:col-span-1">
+                            <label for="exact-price" class="block text-sm font-medium text-slate-600 mb-1">Precio Exacto</label>
+                            <input type="number" id="exact-price" placeholder="Valor fijo..." min="0" class="w-full p-2 border border-slate-300 rounded-md" aria-describedby="exact-price-hint">
+                            <p id="exact-price-hint" class="mt-1 text-xs text-slate-500">Si estableces un Precio Exacto, se ignora el rango Desde/Hasta.</p>
+                        </div>
+                        <div class="md:col-span-1"><label for="price-sort" class="block text-sm font-medium text-slate-600 mb-1">Ordenar precio</label><select id="price-sort" class="w-full p-2 border border-slate-300 rounded-md"><option value="default">Por defecto</option><option value="asc">Menor a Mayor</option><option value="desc">Mayor a Menor</option></select></div>
+                    </div>
+                </div>
+                <div class="mt-3 flex justify-end">
+                    <button id="clear-filters-btn" class="w-full md:w-auto btn-danger font-semibold py-2 px-4 rounded-md transition">Limpiar filtros</button>
+                </div>
+            </div>
+        </div>
+
+        <main class="container mx-auto max-w-7xl p-4 flex-grow">
+            <div class="flex justify-between items-center mb-2">
+                <div id="product-count" class="text-sm text-slate-500"></div>
+                <div class="relative">
+                    <button id="sort-menu-btn" class="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md px-3 py-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h13M3 8h9M3 12h9M3 16h5M21 12l-4-4-4 4M17 20V8"/></svg>
+                        <span>Ordenar</span>
+                    </button>
+                    <div id="sort-menu" class="hidden absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md shadow-lg z-20">
+                        <div class="p-3">
+                            <div class="mb-3">
+                                <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Ordenar por</div>
+                                <div class="space-y-1" id="sort-by-group">
+                                    <label class="flex items-center gap-2 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer">
+                                        <input type="radio" name="sort-by" value="name" class="form-radio text-blue-600 focus:ring-blue-500">
+                                        <span class="text-sm">Nombre</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer">
+                                        <input type="radio" name="sort-by" value="brand" class="form-radio text-blue-600 focus:ring-blue-500">
+                                        <span class="text-sm">Marca</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer">
+                                        <input type="radio" name="sort-by" value="category" class="form-radio text-blue-600 focus:ring-blue-500">
+                                        <span class="text-sm">Categoría</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="border-t border-slate-200 dark:border-slate-700 pt-3">
+                                <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Dirección</div>
+                                <div class="space-y-1" id="sort-direction-group">
+                                    <label class="flex items-center gap-2 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer">
+                                        <input type="radio" name="sort-direction" value="asc" class="form-radio text-blue-600 focus:ring-blue-500">
+                                        <span class="text-sm">Ascendente (A-Z)</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer">
+                                        <input type="radio" name="sort-direction" value="desc" class="form-radio text-blue-600 focus:ring-blue-500">
+                                        <span class="text-sm">Descendente (Z-A)</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <div class="table-container overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-100 border-b border-slate-200">
+                            <tr>
+                                <th class="p-3 font-semibold text-sm text-slate-600 text-center">Código</th>
+                                <th class="p-3 font-semibold text-sm text-slate-600">Nombre</th>
+                                <th class="p-3 font-semibold text-sm text-slate-600 text-center">Marca</th>
+                                <th class="p-3 font-semibold text-sm text-slate-600 text-center">Precio</th>
+                                <th class="p-3 font-semibold text-sm text-slate-600 text-center">Categoría</th>
+                                <th class="p-3 font-semibold text-sm text-slate-600 text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="product-table-body" class="divide-y divide-slate-200"></tbody>
+                    </table>
+                </div>
+                <div id="pagination" class="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 border-t border-slate-200">
+                    <div class="flex items-center gap-2">
+                        <label for="page-size" class="text-sm text-slate-600">Por página</label>
+                        <select id="page-size" class="p-1 border border-slate-300 rounded-md text-sm">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button id="page-prev" class="px-3 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:opacity-50" aria-label="Página anterior">Anterior</button>
+                        <span id="page-info" class="text-sm text-slate-600"></span>
+                        <button id="page-next" class="px-3 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:opacity-50" aria-label="Página siguiente">Siguiente</button>
+                    </div>
+                </div>
+                <div id="no-results" class="hidden text-center p-8 text-slate-500">
+                    <p class="font-semibold">No se encontraron productos</p>
+                    <p class="text-sm">Intenta con otra búsqueda o ajusta los filtros.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <!-- Brand Selector Modal -->
+    <div id="brand-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 invisible opacity-0 z-50" role="dialog" aria-modal="true" aria-labelledby="brand-modal-title">
+        <div class="modal-content bg-white rounded-lg shadow-xl w-full max-w-md p-5 transform -translate-y-10 scale-95" tabindex="-1">
+            <div class="flex items-center justify-between mb-3">
+                <h2 id="brand-modal-title" class="text-lg font-semibold">Seleccionar marca</h2>
+                <button id="brand-modal-close-btn" class="p-2 rounded-md hover:bg-slate-100" aria-label="Cerrar">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div>
+                <input type="text" id="brand-modal-search" placeholder="Buscar marca..." class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500" autocomplete="off">
+            </div>
+            <div id="brand-modal-list" class="mt-3 max-h-80 overflow-y-auto border border-slate-200 rounded-md bg-white p-1 grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-1"></div>
+            <div class="mt-4 flex justify-end gap-2">
+                <button id="brand-modal-clear-btn" class="bg-slate-100 text-slate-700 font-semibold py-2 px-3 rounded-md hover:bg-slate-200 transition">Limpiar</button>
+                <button id="brand-modal-cancel-btn" class="bg-slate-100 text-slate-700 font-semibold py-2 px-3 rounded-md hover:bg-slate-200 transition">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    <div id="add-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 invisible opacity-0 z-40" role="dialog" aria-modal="true" aria-labelledby="add-modal-title">
+        <div class="modal-content bg-white rounded-lg shadow-xl w-full max-w-md p-6 transform -translate-y-10 scale-95" tabindex="-1">
+            <h2 id="add-modal-title" class="text-xl font-bold mb-4">Añadir Nuevo Producto</h2>
+            <form id="add-product-form" class="space-y-2">
+                <div>
+                    <label for="prod-id" class="block text-sm font-medium text-slate-600">Código</label>
+                    <input type="text" id="prod-id" required class="mt-1 w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 transition">
+                    <p id="prod-id-error" class="text-red-600 text-xs mt-1 h-4"></p>
+                </div>
+                <div>
+                    <label for="prod-name" class="block text-sm font-medium text-slate-600">Nombre</label>
+                    <input type="text" id="prod-name" required class="mt-1 w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 transition">
+                    <p id="prod-name-error" class="text-red-600 text-xs mt-1 h-4"></p>
+                </div>
+                 <div class="pt-2 relative">
+                    <div id="add-brand-suggestions" class="absolute left-0 right-0 bottom-full mb-1 bg-white border border-slate-300 rounded-md shadow-lg z-10 hidden max-h-40 overflow-y-auto"></div>
+                    <label for="prod-brand" class="block text-sm font-medium text-slate-600">Marca</label>
+                    <input type="text" id="prod-brand" required class="mt-1 w-full p-2 border border-slate-300 rounded-md" autocomplete="off">
+                </div>
+                <div class="grid grid-cols-2 gap-4 pt-2">
+                    <div>
+                        <label for="prod-price" class="block text-sm font-medium text-slate-600">Precio</label>
+                        <input type="number" id="prod-price" step="0.01" min="0" required class="mt-1 w-full p-2 border border-slate-300 rounded-md">
+                    </div>
+                    <div>
+                        <label for="prod-currency" class="block text-sm font-medium text-slate-600">Moneda</label>
+                        <select id="prod-currency" required class="mt-1 w-full p-2 border border-slate-300 rounded-md"></select>
+                    </div>
+                </div>
+                <div class="pt-2 relative">
+                    <div id="add-category-suggestions" class="absolute left-0 right-0 bottom-full mb-1 bg-white border border-slate-300 rounded-md shadow-lg z-10 hidden max-h-40 overflow-y-auto"></div>
+                    <label for="prod-category" class="block text-sm font-medium text-slate-600">Categoría</label>
+                    <input type="text" id="prod-category" required class="mt-1 w-full p-2 border border-slate-300 rounded-md" autocomplete="off">
+                </div>
+                <div class="pt-2">
+                    <label for="prod-photo" class="block text-sm font-medium text-slate-600">Foto (opcional) <span class="text-xs font-normal text-slate-400">(o pega con Ctrl+V)</span></label>
+                    <div class="mt-1">
+                        <input type="file" id="prod-photo" accept="image/*" class="hidden" />
+                        <div class="flex items-center gap-2">
+                            <button type="button" id="add-photo-trigger" class="bg-blue-50 text-blue-700 font-semibold py-2 px-4 rounded-md hover:bg-blue-100 transition text-sm">Seleccionar archivo</button>
+                            <button type="button" id="add-photo-paste-btn" class="bg-blue-50 text-blue-700 p-2 rounded-md hover:bg-blue-100 transition" title="Pegar imagen del portapapeles">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+                            </button>
+                            <button type="button" id="add-photo-remove" class="bg-slate-100 text-slate-700 text-sm py-2 px-3 rounded-md hover:bg-slate-200 transition hidden">Quitar</button>
+                        </div>
+                        <span id="add-photo-name" class="text-xs text-slate-500 truncate block mt-1 max-w-full">Sin archivos seleccionados</span>
+                    </div>
+                    <div class="mt-2">
+                        <img id="add-photo-preview" alt="Vista previa" class="h-16 w-16 object-cover rounded border border-slate-200 hidden">
+                    </div>
+                    <p id="add-photo-error" class="text-red-600 text-xs mt-1 h-4"></p>
+                </div>
+                <div class="mt-6 flex justify-end gap-3 pt-4">
+                    <button type="button" id="cancel-add-btn" class="bg-slate-100 text-slate-700 font-semibold py-2 px-4 rounded-md hover:bg-slate-200 transition">Cancelar</button>
+                    <button type="submit" id="save-product-btn" class="btn-confirm bg-green-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-green-700 transition">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="edit-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 invisible opacity-0 z-40" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
+        <div class="modal-content bg-white rounded-lg shadow-xl w-full max-w-md p-6 transform -translate-y-10 scale-95" tabindex="-1">
+            <h2 id="edit-modal-title" class="text-xl font-bold mb-4">Editar Producto</h2>
+            <form id="edit-product-form" class="space-y-2">
+                <input type="hidden" id="edit-prod-original-id">
+                <input type="hidden" id="edit-prod-original-name">
+                <div>
+                    <label for="edit-prod-id" class="block text-sm font-medium text-slate-600">Código</label>
+                    <input type="text" id="edit-prod-id" required class="mt-1 w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 transition">
+                    <p id="edit-prod-id-error" class="text-red-600 text-xs mt-1 h-4"></p>
+                </div>
+                <div>
+                    <label for="edit-prod-name" class="block text-sm font-medium text-slate-600">Nombre</label>
+                    <input type="text" id="edit-prod-name" required class="mt-1 w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 transition">
+                    <p id="edit-prod-name-error" class="text-red-600 text-xs mt-1 h-4"></p>
+                </div>
+                <div class="pt-2 relative">
+                    <div id="edit-brand-suggestions" class="absolute left-0 right-0 bottom-full mb-1 bg-white border border-slate-300 rounded-md shadow-lg z-10 hidden max-h-40 overflow-y-auto"></div>
+                    <label for="edit-prod-brand" class="block text-sm font-medium text-slate-600">Marca</label>
+                    <input type="text" id="edit-prod-brand" required class="mt-1 w-full p-2 border border-slate-300 rounded-md" autocomplete="off">
+                </div>
+                <div class="grid grid-cols-2 gap-4 pt-2">
+                    <div>
+                        <label for="edit-prod-price" class="block text-sm font-medium text-slate-600">Precio</label>
+                        <input type="number" id="edit-prod-price" step="0.01" min="0" required class="mt-1 w-full p-2 border border-slate-300 rounded-md">
+                    </div>
+                    <div>
+                        <label for="edit-prod-currency" class="block text-sm font-medium text-slate-600">Moneda</label>
+                        <select id="edit-prod-currency" required class="mt-1 w-full p-2 border border-slate-300 rounded-md"></select>
+                    </div>
+                </div>
+                <div class="pt-2 relative">
+                    <div id="edit-category-suggestions" class="absolute left-0 right-0 bottom-full mb-1 bg-white border border-slate-300 rounded-md shadow-lg z-10 hidden max-h-40 overflow-y-auto"></div>
+                    <label for="edit-prod-category" class="block text-sm font-medium text-slate-600">Categoría</label>
+                    <input type="text" id="edit-prod-category" required class="mt-1 w-full p-2 border border-slate-300 rounded-md" autocomplete="off">
+                </div>
+                <div class="pt-2">
+                    <label for="edit-prod-photo" class="block text-sm font-medium text-slate-600">Foto (opcional) <span class="text-xs font-normal text-slate-400">(o pega con Ctrl+V)</span></label>
+                    <div class="mt-1">
+                        <input type="file" id="edit-prod-photo" accept="image/*" class="hidden" />
+                        
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <button type="button" id="edit-photo-trigger" class="bg-blue-50 text-blue-700 font-semibold py-2 px-4 rounded-md hover:bg-blue-100 transition text-sm">Seleccionar archivo</button>
+                            
+                            <button type="button" id="edit-photo-change-btn" class="bg-blue-50 text-blue-700 text-sm font-semibold py-2 px-4 rounded-md hover:bg-blue-100 transition hidden">Cambiar foto</button>
+
+                            <button type="button" id="edit-photo-paste-btn" class="bg-blue-50 text-blue-700 p-2 rounded-md hover:bg-blue-100 transition" title="Pegar imagen del portapapeles">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+                            </button>
+
+                            <button type="button" id="edit-photo-remove" class="bg-slate-100 text-slate-700 text-sm py-2 px-3 rounded-md hover:bg-slate-200 transition hidden">Quitar</button>
+                        </div>
+
+                        <span id="edit-photo-name" class="text-xs text-slate-500 truncate block mt-1 max-w-full">Sin archivos seleccionados</span>
+                    </div>
+                    <div class="mt-2">
+                        <img id="edit-photo-preview" alt="Vista previa" class="h-16 w-16 object-cover rounded border border-slate-200 hidden">
+                    </div>
+                    <p id="edit-photo-error" class="text-red-600 text-xs mt-1 h-4"></p>
+                </div>
+                <div class="mt-6 flex justify-end gap-3 pt-4">
+                    <button type="button" id="cancel-edit-btn" class="bg-slate-100 text-slate-700 font-semibold py-2 px-4 rounded-md hover:bg-slate-200 transition">Cancelar</button>
+                    <button type="submit" id="save-edit-btn" class="btn-confirm bg-green-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-green-700 transition">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- Photo Modal -->
+    <div id="photo-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 invisible opacity-0 z-50" role="dialog" aria-modal="true" aria-labelledby="photo-modal-title">
+        <div class="modal-content bg-white rounded-lg shadow-xl w-full max-w-lg p-6 transform -translate-y-10 scale-95" tabindex="-1">
+            <h2 id="photo-modal-title" class="text-xl font-bold mb-4">Foto del producto</h2>
+            <div class="flex items-center justify-center">
+                <img id="photo-modal-img" alt="Foto del producto" class="max-h-[70vh] w-auto rounded border border-slate-200">
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button type="button" id="close-photo-btn" class="bg-slate-100 text-slate-700 font-semibold py-2 px-4 rounded-md hover:bg-slate-200 transition">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="delete-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 invisible opacity-0 z-50" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+        <div class="modal-content bg-white rounded-lg shadow-xl w-full max-w-sm p-6 text-center transform -translate-y-10 scale-95" tabindex="-1">
+            <h2 id="delete-modal-title" class="text-xl font-bold mb-2">¿Estás seguro?</h2>
+            <p class="text-slate-500 mb-6">Esta acción no se puede deshacer. Se eliminará el producto permanentemente.</p>
+            <div class="flex justify-center gap-3">
+                <button type="button" id="cancel-delete-btn" class="bg-slate-100 text-slate-700 font-semibold py-2 px-4 rounded-md hover:bg-slate-200 transition w-full">Cancelar</button>
+                <button type="button" id="confirm-delete-btn" class="btn-confirm bg-green-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-green-700 transition w-full">Sí, eliminar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Clear All Modal -->
+    <div id="clear-all-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 invisible opacity-0 z-50" role="dialog" aria-modal="true" aria-labelledby="clear-all-title">
+        <div class="modal-content bg-white rounded-lg shadow-xl w-full max-w-sm p-6 text-center transform -translate-y-10 scale-95" tabindex="-1">
+            <h2 id="clear-all-title" class="text-xl font-bold">Eliminar todos los productos</h2>
+            <div class="flex justify-center my-3">
+                <!-- Trash can icon matching menu style -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="warning-icon w-14 h-14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+            </div>
+            <p class="text-slate-600 mb-6">Esta acción eliminará todos los productos de la lista. ¿Seguro que deseas continuar?</p>
+            <div class="flex justify-center gap-3">
+                <button type="button" id="cancel-clear-all-btn" class="bg-slate-100 text-slate-700 font-semibold py-2 px-4 rounded-md hover:bg-slate-200 transition w-full">Cancelar</button>
+                <button type="button" id="confirm-clear-all-btn" class="btn-confirm bg-green-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-green-700 transition w-full">Sí, eliminar todo</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Options Modal -->
+    <div id="import-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 invisible opacity-0 z-50" role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
+        <div class="modal-content bg-white rounded-lg shadow-xl w-full max-w-sm p-6 text-center transform -translate-y-10 scale-95" tabindex="-1">
+            <h2 id="import-modal-title" class="text-xl font-bold mb-4">Importar Productos</h2>
+            <p class="text-slate-600 mb-6">Elige cómo quieres importar el archivo JSON.</p>
+            <div class="space-y-3">
+                <button type="button" id="import-merge-btn" class="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-md hover:bg-blue-700 transition flex flex-col items-center justify-center gap-1">
+                    <span class="text-base">Fusionar (Recomendado)</span>
+                    <span class="text-xs font-normal opacity-90">Actualiza existentes y agrega nuevos. No borra nada.</span>
+                </button>
+                <button type="button" id="import-replace-btn" class="w-full bg-white border-2 border-red-500 text-red-600 font-semibold py-3 px-4 rounded-md hover:bg-red-50 transition flex flex-col items-center justify-center gap-1">
+                    <span class="text-base">Reemplazar todo</span>
+                    <span class="text-xs font-normal opacity-90">Borra la lista actual y carga la del archivo.</span>
+                </button>
+                <button type="button" id="import-cancel-btn" class="mt-2 text-slate-500 hover:text-slate-700 text-sm underline">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Options Modal -->
+    <div id="export-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 invisible opacity-0 z-50" role="dialog" aria-modal="true" aria-labelledby="export-modal-title">
+        <div class="modal-content bg-white rounded-lg shadow-xl w-full max-w-sm p-6 text-center transform -translate-y-10 scale-95" tabindex="-1">
+            <h2 id="export-modal-title" class="text-xl font-bold mb-4">Exportar Productos</h2>
+            <p class="text-slate-600 mb-6">Elige el formato de exportación.</p>
+            <div class="space-y-3">
+                <button type="button" id="export-json-btn" class="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-md hover:bg-blue-700 transition flex flex-col items-center justify-center gap-1">
+                    <span class="text-base">Solo Datos (JSON)</span>
+                    <span class="text-xs font-normal opacity-90">Archivo ligero, sin imágenes incrustadas</span>
+                </button>
+                <button type="button" id="export-photos-btn" class="w-full bg-white border-2 border-blue-600 text-blue-600 font-semibold py-3 px-4 rounded-md hover:bg-blue-50 transition flex flex-col items-center justify-center gap-1">
+                    <span class="text-base">Datos + Fotos (JSON)</span>
+                    <span class="text-xs font-normal opacity-90">Archivo más pesado, incluye imágenes</span>
+                </button>
+                <button type="button" id="export-cancel-btn" class="mt-2 text-slate-500 hover:text-slate-700 text-sm underline">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toasts -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-[60] space-y-2 pointer-events-none"></div>
+    
+    <script>
+    // Ajuste dinámico de colores de la píldora de marca según el modo
+    function updateBrandChipColors() {
+        const chip = document.getElementById('brand-chip');
+        if (!chip) return;
+        if (document.body.classList.contains('dark')) {
+            chip.style.backgroundColor = '#0b2233';
+            chip.style.color = '#93c5fd';
+            chip.style.borderColor = '#2563eb';
+        } else {
+            chip.style.backgroundColor = '#eff6ff';
+            chip.style.color = '#1e40af';
+            chip.style.borderColor = '#bfdbfe';
+        }
+    }
+    // Observa cambios en el modo oscuro
+    const darkModeObserver = new MutationObserver(updateBrandChipColors);
+    darkModeObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    document.addEventListener('DOMContentLoaded', updateBrandChipColors);
+    document.addEventListener('DOMContentLoaded', () => {
+        // IndexedDB helper para fotos (blobs)
+        const DB_NAME = 'GestorPreciosDB';
+        const DB_VERSION = 1;
+        const IMG_STORE = 'images';
+        let dbPromise = null;
+        function openDB() {
+            if (dbPromise) return dbPromise;
+            dbPromise = new Promise((resolve, reject) => {
+                const req = indexedDB.open(DB_NAME, DB_VERSION);
+                req.onupgradeneeded = () => {
+                    const db = req.result;
+                    if (!db.objectStoreNames.contains(IMG_STORE)) {
+                        db.createObjectStore(IMG_STORE, { keyPath: 'id' });
+                    }
+                };
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+            return dbPromise;
+        }
+        function txStore(mode = 'readonly') {
+            return openDB().then(db => db.transaction(IMG_STORE, mode).objectStore(IMG_STORE));
+        }
+        async function getImageBlob(id) {
+            if (!id) return null;
+            const store = await txStore('readonly');
+            const record = await new Promise((res, rej) => {
+                const req = store.get(id);
+                req.onsuccess = () => res(req.result || null);
+                req.onerror = () => rej(req.error);
+            });
+            return record?.blob || null;
+        }
+        function blobToDataURL(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        }
+        async function listAllImageKeys() {
+            const store = await txStore('readonly');
+            if ('getAllKeys' in store) {
+                return new Promise((res, rej) => {
+                    const req = store.getAllKeys();
+                    req.onsuccess = () => res(req.result || []);
+                    req.onerror = () => rej(req.error);
+                });
+            }
+            // Fallback por cursor
+            return new Promise((res, rej) => {
+                const keys = [];
+                const req = store.openCursor();
+                req.onsuccess = (e) => {
+                    const cursor = e.target.result;
+                    if (cursor) { keys.push(cursor.key); cursor.continue(); }
+                    else res(keys);
+                };
+                req.onerror = () => rej(req.error);
+            });
+        }
+        async function cleanupOrphanImages() {
+            try {
+                const referenced = new Set(products.map(p => p.photoKey).filter(Boolean));
+                const keys = await listAllImageKeys();
+                const orphans = keys.filter(k => !referenced.has(k));
+                if (!orphans.length) return;
+                const store = await txStore('readwrite');
+                await Promise.all(orphans.map(key => new Promise((res, rej) => {
+                    const r = store.delete(key);
+                    r.onsuccess = () => res();
+                    r.onerror = () => rej(r.error);
+                })));
+            } catch (e) {
+                console.warn('Limpieza de imágenes huérfanas falló', e);
+            }
+        }
+        function dataURLToBlob(dataUrl) {
+            const [meta, b64] = dataUrl.split(',');
+            const mime = (meta.match(/data:(.*?);base64/) || [null, 'application/octet-stream'])[1];
+            const binStr = atob(b64);
+            const len = binStr.length;
+            const arr = new Uint8Array(len);
+            for (let i = 0; i < len; i++) arr[i] = binStr.charCodeAt(i);
+            return new Blob([arr], { type: mime });
+        }
+        function genKey() {
+            return (self.crypto?.randomUUID?.() || `img_${Date.now()}_${Math.random().toString(36).slice(2)}`);
+        }
+        async function saveImageFromDataURL(dataUrl) {
+            if (!dataUrl) return undefined;
+            const blob = dataURLToBlob(dataUrl);
+            return saveImageBlob(blob);
+        }
+        async function saveImageBlob(blob) {
+            if (!blob) return undefined;
+            const id = genKey();
+            const store = await txStore('readwrite');
+            await new Promise((res, rej) => {
+                const req = store.put({ id, blob, type: blob.type || 'image/jpeg', createdAt: Date.now() });
+                req.onsuccess = () => res();
+                req.onerror = () => rej(req.error);
+            });
+            return id;
+        }
+        async function getImageURL(id) {
+            if (!id) return null;
+            const store = await txStore('readonly');
+            const record = await new Promise((res, rej) => {
+                const req = store.get(id);
+                req.onsuccess = () => res(req.result || null);
+                req.onerror = () => rej(req.error);
+            });
+            if (!record?.blob) return null;
+            return URL.createObjectURL(record.blob);
+        }
+        async function deleteImage(id) {
+            if (!id) return;
+            const store = await txStore('readwrite');
+            await new Promise((res, rej) => {
+                const req = store.delete(id);
+                req.onsuccess = () => res();
+                req.onerror = () => rej(req.error);
+            });
+        }
+
+        const currencySymbols = { USD: { symbol: '$', name: 'Dólar Americano' }, NIO: { symbol: 'C$', name: 'Córdoba Nicaragüense' }, EUR: { symbol: '€', name: 'Euro' }, MXN: { symbol: '$', name: 'Peso Mexicano' } };
+        const defaultProducts = [
+            {
+                id: "EJEMPLO1",
+                name: "Producto de ejemplo (puedes eliminarlo)",
+                brand: "Tu Marca",
+                price: 0.00,
+                category: "Demostración",
+                currency: "NIO"
+            }
+        ];
+        let products = [];
+        let productToDeleteId = null;
+        let productToEditId = null;
+
+    const searchCodeInput = document.getElementById('search-code');
+    const clearCodeBtn = document.getElementById('clear-search-code');
+    const searchNameInput = document.getElementById('search-name');
+    const clearNameBtn = document.getElementById('clear-search-name');
+    const searchBrandInput = document.getElementById('search-brand'); 
+    const brandSelectedLabel = document.getElementById('brand-selected-label');
+    const brandChip = document.getElementById('brand-chip');
+    const brandChipText = document.getElementById('brand-chip-text');
+        const categoryFilter = document.getElementById('category-filter'); 
+        const currencyFilter = document.getElementById('currency-filter'); 
+        const priceSort = document.getElementById('price-sort'); 
+        const minPriceInput = document.getElementById('min-price'); 
+        const maxPriceInput = document.getElementById('max-price'); 
+        const exactPriceInput = document.getElementById('exact-price'); 
+        const tableBody = document.getElementById('product-table-body'); 
+        const noResults = document.getElementById('no-results'); 
+        const productCount = document.getElementById('product-count'); 
+        // Sort menu controls
+        const sortMenuBtn = document.getElementById('sort-menu-btn');
+        const sortMenu = document.getElementById('sort-menu');
+        let currentSort = { by: 'name', dir: 'asc' }; // defaults
+        function loadSortState() {
+            try {
+                const raw = localStorage.getItem('sortState');
+                if (!raw) return;
+                const st = JSON.parse(raw);
+                if (st && typeof st === 'object') {
+                    if (st.by) currentSort.by = st.by;
+                    if (st.dir) currentSort.dir = st.dir;
+                }
+            } catch {}
+        }
+        function saveSortState() {
+            try { localStorage.setItem('sortState', JSON.stringify(currentSort)); } catch {}
+        }
+        function setSortRadiosFromState() {
+            try {
+                const byEl = document.querySelector(`input[name="sort-by"][value="${currentSort.by}"]`);
+                const dirEl = document.querySelector(`input[name="sort-direction"][value="${currentSort.dir}"]`);
+                if (byEl) byEl.checked = true;
+                if (dirEl) dirEl.checked = true;
+            } catch {}
+        }
+        function setupSortMenu() {
+            if (!sortMenuBtn || !sortMenu) return;
+            // Toggle open/close
+            sortMenuBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                sortMenu.classList.toggle('hidden');
+            });
+            // Close when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!sortMenu || sortMenu.classList.contains('hidden')) return;
+                const within = sortMenu.contains(e.target) || sortMenuBtn.contains(e.target);
+                if (!within) sortMenu.classList.add('hidden');
+            });
+            // Close on Escape
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && sortMenu && !sortMenu.classList.contains('hidden')) {
+                    sortMenu.classList.add('hidden');
+                }
+            });
+            // Listen to radio changes
+            sortMenu.querySelectorAll('input[name="sort-by"]').forEach(r => {
+                r.addEventListener('change', () => {
+                    currentSort.by = r.value;
+                    saveSortState();
+                    currentPage = 1;
+                    applyFiltersAndSort();
+                });
+            });
+            sortMenu.querySelectorAll('input[name="sort-direction"]').forEach(r => {
+                r.addEventListener('change', () => {
+                    currentSort.dir = r.value;
+                    saveSortState();
+                    currentPage = 1;
+                    applyFiltersAndSort();
+                });
+            });
+        }
+        
+        const addModal = document.getElementById('add-modal');
+        const addProductBtn = document.getElementById('add-product-btn'); 
+        const cancelAddBtn = document.getElementById('cancel-add-btn'); 
+        const addProductForm = document.getElementById('add-product-form');
+        const prodIdInput = document.getElementById('prod-id');
+        const prodNameInput = document.getElementById('prod-name');
+        const prodBrandInput = document.getElementById('prod-brand');
+        const prodIdError = document.getElementById('prod-id-error');
+        const prodNameError = document.getElementById('prod-name-error');
+        const prodCurrencySelect = document.getElementById('prod-currency');
+        const saveProductBtn = document.getElementById('save-product-btn');
+        const addCategoryInput = document.getElementById('prod-category');
+        const addCategorySuggestions = document.getElementById('add-category-suggestions');
+        const addBrandSuggestions = document.getElementById('add-brand-suggestions');
+
+        const editModal = document.getElementById('edit-modal');
+        const editProductForm = document.getElementById('edit-product-form');
+        const cancelEditBtn = document.getElementById('cancel-edit-btn');
+        const saveEditBtn = document.getElementById('save-edit-btn');
+        const editCategoryInput = document.getElementById('edit-prod-category');
+        const editCategorySuggestions = document.getElementById('edit-category-suggestions');
+        const editBrandInput = document.getElementById('edit-prod-brand');
+        const editBrandSuggestions = document.getElementById('edit-brand-suggestions');
+        
+        const deleteModal = document.getElementById('delete-modal');
+        const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+        const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+
+        const toggleFiltersBtn = document.getElementById('toggle-filters-btn'); 
+        const filterGrid = document.getElementById('filter-grid'); 
+        const filterChevron = document.getElementById('filter-chevron');
+    const clearFiltersBtn = document.getElementById('clear-filters-btn');
+    const installBtn = document.getElementById('install-btn');
+    const updateAppBtn = document.getElementById('update-app-btn');
+        // Forzar actualización del Service Worker
+        updateAppBtn.addEventListener('click', async () => {
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.getRegistration().then(reg => {
+                    if (reg) {
+                        reg.update().then(() => {
+                            if (reg.waiting) {
+                                reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                                alert('Actualización aplicada. Recarga la app para ver los cambios.');
+                            } else {
+                                alert('La app ya está actualizada.');
+                            }
+                        });
+                    } else {
+                        alert('No se encontró Service Worker registrado.');
+                    }
+                });
+            } else {
+                alert('No se detectó Service Worker activo.');
+            }
+        });
+    const exportBtn = document.getElementById('export-btn');
+    const importBtn = document.getElementById('import-btn');
+    const importFileInput = document.getElementById('import-file');
+    const clearAllBtn = document.getElementById('clear-all-btn');
+    const clearAllModal = document.getElementById('clear-all-modal');
+    const cancelClearAllBtn = document.getElementById('cancel-clear-all-btn');
+    const confirmClearAllBtn = document.getElementById('confirm-clear-all-btn');
+    const toastContainer = document.getElementById('toast-container');
+    // Brand modal elements
+    const brandModal = document.getElementById('brand-modal');
+    const brandModalSearch = document.getElementById('brand-modal-search');
+    const brandModalList = document.getElementById('brand-modal-list');
+    const brandModalCloseBtn = document.getElementById('brand-modal-close-btn');
+    const brandModalClearBtn = document.getElementById('brand-modal-clear-btn');
+    const brandModalCancelBtn = document.getElementById('brand-modal-cancel-btn');
+    // Map bottom-sheet menu items (mobile) to the main action buttons
+    const menuBottomInstall = document.getElementById('menu-bottom-install');
+    const menuBottomExport = document.getElementById('menu-bottom-export');
+    const menuBottomImport = document.getElementById('menu-bottom-import');
+    const menuBottomClearAll = document.getElementById('menu-bottom-clear-all');
+    if (menuBottomInstall) menuBottomInstall.addEventListener('click', () => { const t = document.getElementById('install-btn'); if (t) t.click(); closeAppMenu(); });
+    if (menuBottomExport) menuBottomExport.addEventListener('click', () => { if (exportBtn) exportBtn.click(); closeAppMenu(); });
+    if (menuBottomImport) menuBottomImport.addEventListener('click', () => { if (importBtn) importBtn.click(); closeAppMenu(); });
+
+        // Tokens de resaltado usados en la tabla y listas
+        let lastHighlightTokens = { code: [], name: [], brand: [], category: [] };
+
+        const icons = {
+            edit: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>',
+            delete: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>',
+            photo: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" ry="2"></rect><circle cx="8.5" cy="12.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path></svg>'
+        };
+
+        // Helpers de búsqueda: normalización, tokens y stopwords en español
+        const STOPWORDS_ES = new Set([
+            'de','la','el','los','las','y','o','u','del','al','para','con','en','a','por',
+            'un','una','unos','unas','lo','su','sus','mi','mis','tu','tus','se','es','son'
+        ]);
+        function normalizeText(s) {
+            return (s || '')
+                .toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9]+/g, ' ')
+                .trim();
+        }
+        function tokenizeQuery(q) {
+            // Normalizar y dividir en tokens
+            const tokens = normalizeText(q).split(/\s+/).filter(t => t);
+            // Si el usuario escribió solo stopwords, devolverlos tal cual (búsqueda literal)
+            if (tokens.length > 0 && tokens.every(t => STOPWORDS_ES.has(t))) {
+                return tokens;
+            }
+            // Comportamiento normal: mantener tokens de 1 carácter o aquellos que no sean stopwords
+            return tokens.filter(t => t && (t.length <= 1 || !STOPWORDS_ES.has(t)));
+        }
+
+        function buildBrandSearchText(p) {
+            return normalizeText(p.brand || '');
+        }
+        // Resaltado de coincidencias (ignora acentos y mayúsculas)
+        function escapeHTML(s) {
+            return (s || '').toString()
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+        function normalizeWithMap(str) {
+            // Devuelve { norm, map } donde map[iNorm] = índice original en str
+            const map = [];
+            let norm = '';
+            const len = (str ?? '').length;
+            for (let i = 0; i < len; i++) {
+                const ch = str[i];
+                // Descomponer y quitar diacríticos
+                const base = ch.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                // Puede producir más de 1 char (poco común). Mapear cada uno al índice original
+                for (let k = 0; k < base.length; k++) {
+                    norm += base[k].toLowerCase();
+                    map.push(i);
+                }
+            }
+            return { norm, map };
+        }
+        function mergeRanges(ranges) {
+            if (!ranges.length) return [];
+            ranges.sort((a,b) => a[0]-b[0] || a[1]-b[1]);
+            const out = [ranges[0].slice()];
+            for (let i = 1; i < ranges.length; i++) {
+                const last = out[out.length-1];
+                const cur = ranges[i];
+                if (cur[0] <= last[1]) { last[1] = Math.max(last[1], cur[1]); }
+                else out.push(cur.slice());
+            }
+            return out;
+        }
+        function highlightMatches(text, tokens) {
+            const raw = (text ?? '').toString();
+            if (!raw || !tokens || tokens.length === 0) return escapeHTML(raw);
+            const { norm, map } = normalizeWithMap(raw);
+            const ranges = [];
+            for (const t of tokens) {
+                const q = (t || '').toString().toLowerCase();
+                if (!q) continue;
+                let idx = norm.indexOf(q);
+                while (idx !== -1) {
+                    const startOrig = map[idx];
+                    const endOrig = map[Math.min(idx + q.length - 1, map.length - 1)] + 1;
+                    ranges.push([startOrig, endOrig]);
+                    idx = norm.indexOf(q, idx + 1);
+                }
+            }
+            const merged = mergeRanges(ranges);
+            if (!merged.length) return escapeHTML(raw);
+            let out = '';
+            let cursor = 0;
+            for (const [s, e] of merged) {
+                if (cursor < s) out += escapeHTML(raw.slice(cursor, s));
+                out += '<mark class="highlight">' + escapeHTML(raw.slice(s, e)) + '</mark>';
+                cursor = e;
+            }
+            if (cursor < raw.length) out += escapeHTML(raw.slice(cursor));
+            return out;
+        }
+    // Estado de fotos para formularios
+    let addPhotoDataUrl = null;
+    let editPhotoDataUrl = null;
+    let editRemovePhoto = false;
+
+    // Elementos de foto
+    const addPhotoInput = document.getElementById('prod-photo');
+    const addPhotoPreview = document.getElementById('add-photo-preview');
+    const addPhotoRemoveBtn = document.getElementById('add-photo-remove');
+    const addPhotoError = document.getElementById('add-photo-error');
+    const editPhotoInput = document.getElementById('edit-prod-photo');
+    const editPhotoPreview = document.getElementById('edit-photo-preview');
+    const editPhotoRemoveBtn = document.getElementById('edit-photo-remove');
+    const editPhotoChangeBtn = document.getElementById('edit-photo-change-btn');
+    const editPhotoError = document.getElementById('edit-photo-error');
+
+    // Modal de foto
+    const photoModal = document.getElementById('photo-modal');
+    const photoModalImg = document.getElementById('photo-modal-img');
+    const closePhotoBtn = document.getElementById('close-photo-btn');
+
+        // App menu (top-left) - responsive overlay (sidebar on desktop, bottom sheet on mobile)
+        const appMenuBtn = document.getElementById('app-menu-btn');
+        const appMenuOverlay = document.getElementById('app-menu-overlay');
+        const appMenuBackdrop = document.getElementById('app-menu-backdrop');
+        const appMenuSidebar = document.getElementById('app-menu-sidebar');
+        const appMenuBottom = document.getElementById('app-menu-bottom');
+        const bottomSheetHandle = document.getElementById('bottom-sheet-handle');
+    const optDarkMode = document.getElementById('opt-dark-mode');
+    const optDarkModeBottom = document.getElementById('opt-dark-mode-bottom');
+    const appMenuCloseBtn = document.getElementById('app-menu-close-btn');
+        let removeMenuTrap = () => {};
+
+        function isDesktop() { return window.matchMedia('(min-width: 768px)').matches; }
+
+        function openAppMenu() {
+            if (!appMenuOverlay) return;
+            // show overlay first
+            appMenuOverlay.classList.remove('hidden');
+            // prevent page scroll while menu is open
+            document.body.style.overflow = 'hidden';
+            appMenuBtn.setAttribute('aria-expanded', 'true');
+            // use requestAnimationFrame to ensure the browser applies the 'hidden' removal
+            // before we toggle transform classes so the transition is animated.
+            requestAnimationFrame(() => {
+                if (isDesktop() && appMenuSidebar) {
+                    // ensure starting class is present
+                    appMenuSidebar.classList.add('-translate-x-full');
+                    // trigger reflow then remove to animate in
+                    requestAnimationFrame(() => {
+                        appMenuSidebar.classList.remove('-translate-x-full');
+                        appMenuSidebar.classList.add('translate-x-0');
+                        removeMenuTrap = trapFocus(appMenuSidebar);
+                    });
+                } else if (appMenuBottom) {
+                    appMenuBottom.classList.add('translate-y-full');
+                    requestAnimationFrame(() => {
+                        appMenuBottom.classList.remove('translate-y-full');
+                        appMenuBottom.classList.add('translate-y-0');
+                        removeMenuTrap = trapFocus(appMenuBottom);
+                    });
+                }
+            });
+        }
+
+        function closeAppMenu() {
+            if (!appMenuOverlay) return;
+            appMenuBtn.setAttribute('aria-expanded', 'false');
+            // allow body scroll again
+            document.body.style.overflow = '';
+            if (isDesktop() && appMenuSidebar) {
+                // animate out
+                appMenuSidebar.classList.add('-translate-x-full');
+                appMenuSidebar.classList.remove('translate-x-0');
+            }
+            if (appMenuBottom) {
+                appMenuBottom.classList.add('translate-y-full');
+                appMenuBottom.classList.remove('translate-y-0');
+                // reset inline transform
+                appMenuBottom.style.transform = '';
+            }
+            // wait for transition to finish before hiding overlay and removing trap
+            const duration = 320; // a bit more than CSS 300ms
+            setTimeout(() => {
+                if (appMenuOverlay) appMenuOverlay.classList.add('hidden');
+                try { removeMenuTrap(); } catch (e) {}
+                try { if (appMenuBtn) appMenuBtn.focus(); } catch(e) {}
+            }, duration);
+        }
+
+        appMenuBtn.addEventListener('click', (e) => {
+            const open = appMenuOverlay && !appMenuOverlay.classList.contains('hidden');
+            if (open) closeAppMenu(); else openAppMenu();
+            e.stopPropagation();
+        });
+
+        // close when clicking backdrop
+        if (appMenuBackdrop) {
+            appMenuBackdrop.addEventListener('click', closeAppMenu);
+        }
+
+        // close button in sidebar
+        if (appMenuCloseBtn) {
+            appMenuCloseBtn.addEventListener('click', () => { closeAppMenu(); });
+        }
+
+        // close on Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && appMenuOverlay && !appMenuOverlay.classList.contains('hidden')) closeAppMenu();
+        });
+
+        // Los botones del menú ya no contienen duplicados de la barra superior,
+        // por lo que no necesitamos mapear clicks entre elementos.
+
+        // Sync dark mode toggles if both exist
+        if (optDarkMode && optDarkModeBottom) {
+            optDarkModeBottom.checked = optDarkMode.checked;
+            optDarkModeBottom.addEventListener('change', () => { optDarkMode.checked = optDarkModeBottom.checked; optDarkMode.dispatchEvent(new Event('change')); });
+            optDarkMode.addEventListener('change', () => { optDarkModeBottom.checked = optDarkMode.checked; });
+        }
+
+        // Bottom sheet: touch drag to close
+        if (appMenuBottom && bottomSheetHandle) {
+            let startY = 0, currentY = 0, dragging = false;
+            const onStart = (y) => { startY = y; dragging = true; appMenuBottom.style.transition = 'none'; };
+            const onMove = (y) => {
+                if (!dragging) return; currentY = y; const dy = Math.max(0, currentY - startY); appMenuBottom.style.transform = `translateY(${dy}px)`; };
+            const onEnd = () => { dragging = false; const dy = currentY - startY; appMenuBottom.style.transition = ''; appMenuBottom.style.transform = ''; if (dy > 100) closeAppMenu(); };
+            bottomSheetHandle.addEventListener('touchstart', (e) => onStart(e.touches[0].clientY));
+            bottomSheetHandle.addEventListener('touchmove', (e) => onMove(e.touches[0].clientY));
+            bottomSheetHandle.addEventListener('touchend', onEnd);
+            // also allow drag from sheet content
+            appMenuBottom.addEventListener('touchstart', (e) => onStart(e.touches[0].clientY));
+            appMenuBottom.addEventListener('touchmove', (e) => onMove(e.touches[0].clientY));
+            appMenuBottom.addEventListener('touchend', onEnd);
+        }
+
+        // Dark mode: persist preference and apply on load
+        function applyDarkMode(enabled) {
+            document.body.classList.toggle('dark', !!enabled);
+        }
+        if (optDarkMode) {
+            // load saved preference
+            try {
+                const saved = localStorage.getItem('darkMode');
+                const active = saved === '1';
+                optDarkMode.checked = active;
+                if (optDarkModeBottom) optDarkModeBottom.checked = active; // Mantener ambos toggles sincronizados al cargar
+                applyDarkMode(active);
+            } catch (e) {}
+
+            optDarkMode.addEventListener('change', (e) => {
+                const on = !!optDarkMode.checked;
+                applyDarkMode(on);
+                try { localStorage.setItem('darkMode', on ? '1' : '0'); } catch (e) {}
+            });
+
+            // Lógica de estilo de tabla
+            const tableStyleOpts = {
+                compact: { main: document.getElementById('opt-table-compact'), bottom: document.getElementById('opt-table-compact-bottom'), cls: 'table-compact' },
+                bordered: { main: document.getElementById('opt-table-bordered'), bottom: document.getElementById('opt-table-bordered-bottom'), cls: 'table-bordered' },
+                striped: { main: document.getElementById('opt-table-striped'), bottom: document.getElementById('opt-table-striped-bottom'), cls: 'table-striped' }
+            };
+            
+            function applyTableStyle() {
+                const table = document.querySelector('table');
+                if (!table) return;
+                
+                const styleState = {};
+                Object.keys(tableStyleOpts).forEach(key => {
+                    const opt = tableStyleOpts[key];
+                    if (opt.main && opt.bottom) {
+                        const isChecked = opt.main.checked; // main and bottom are synced
+                        if (isChecked) table.classList.add(opt.cls);
+                        else table.classList.remove(opt.cls);
+                        styleState[key] = isChecked;
+                    }
+                });
+                try { localStorage.setItem('tableStyle', JSON.stringify(styleState)); } catch(e){}
+            }
+
+            function loadTableStyle() {
+                try {
+                    const raw = localStorage.getItem('tableStyle');
+                    if (!raw) return;
+                    const styleState = JSON.parse(raw);
+                    Object.keys(tableStyleOpts).forEach(key => {
+                        if (styleState[key] && tableStyleOpts[key].main && tableStyleOpts[key].bottom) {
+                            tableStyleOpts[key].main.checked = true;
+                            tableStyleOpts[key].bottom.checked = true;
+                        }
+                    });
+                    applyTableStyle();
+                } catch (e) { console.error('Error loading table style', e); }
+            }
+
+            // Sync and listen
+            Object.keys(tableStyleOpts).forEach(key => {
+                const opt = tableStyleOpts[key];
+                if (opt.main && opt.bottom) {
+                    opt.main.addEventListener('change', () => {
+                        opt.bottom.checked = opt.main.checked;
+                        applyTableStyle();
+                    });
+                    opt.bottom.addEventListener('change', () => {
+                        opt.main.checked = opt.bottom.checked;
+                        applyTableStyle();
+                    });
+                }
+            });
+            
+            loadTableStyle();
+            
+            // Configuración de mostrar fotos en lista
+            const optShowThumbs = document.getElementById('opt-show-thumbs');
+            const optShowThumbsBottom = document.getElementById('opt-show-thumbs-bottom');
+            
+            function loadShowThumbs() {
+                const saved = localStorage.getItem('showThumbs') === '1';
+                if (optShowThumbs) optShowThumbs.checked = saved;
+                if (optShowThumbsBottom) optShowThumbsBottom.checked = saved;
+            }
+            
+            function saveShowThumbs() {
+                const val = optShowThumbs.checked;
+                localStorage.setItem('showThumbs', val ? '1' : '0');
+                // Refrescar tabla
+                currentPage = 1;
+                applyFiltersAndSort();
+            }
+            
+            if (optShowThumbs && optShowThumbsBottom) {
+                optShowThumbs.addEventListener('change', () => {
+                    optShowThumbsBottom.checked = optShowThumbs.checked;
+                    saveShowThumbs();
+                });
+                optShowThumbsBottom.addEventListener('change', () => {
+                    optShowThumbs.checked = optShowThumbsBottom.checked;
+                    saveShowThumbs();
+                });
+                loadShowThumbs();
+            }
+        }
+
+        async function initialize() {
+            loadProducts();
+            await migratePhotosToIndexedDBIfNeeded();
+            populateCurrencySelects();
+            // Limpiar filtros al iniciar la app (recarga completa)
+            if (searchCodeInput) searchCodeInput.value = '';
+            if (searchNameInput) searchNameInput.value = '';
+            if (searchBrandInput) searchBrandInput.value = '';
+            if (categoryFilter) categoryFilter.value = '';
+            if (currencyFilter) currencyFilter.value = 'all';
+            if (minPriceInput) minPriceInput.value = '';
+            if (maxPriceInput) maxPriceInput.value = '';
+            if (exactPriceInput) exactPriceInput.value = '';
+            if (priceSort) priceSort.value = 'default';
+            updateBrandSelectedLabel();
+            
+            refreshUI();
+            addEventListeners();
+            registerServiceWorker();
+        }
+        
+        function refreshUI() {
+            populateDynamicFilters();
+            restoreFiltersFromStorage();
+            // Load and reflect sort state
+            loadSortState();
+            setSortRadiosFromState();
+            applyFiltersAndSort();
+        }
+
+        function loadProducts() {
+            const stored = localStorage.getItem('products');
+            if (stored) {
+                try {
+                    const parsed = JSON.parse(stored);
+                    products = Array.isArray(parsed) && parsed.length > 0 ? parsed : [...defaultProducts];
+                } catch (error) {
+                    console.warn('No se pudieron leer los productos guardados, restableciendo valores por defecto.', error);
+                    products = [...defaultProducts];
+                }
+            } else {
+                products = [...defaultProducts];
+            }
+            // Normalizar IDs a MAYÚSCULAS
+            let changed = false;
+            products = products.map(p => {
+                const upperId = (p.id ?? '').toString().toUpperCase();
+                if (p.id !== upperId) { changed = true; return { ...p, id: upperId }; }
+                return p;
+            });
+            saveProducts();
+        }
+        function saveProducts() { localStorage.setItem('products', JSON.stringify(products)); }
+        
+        function populateCurrencySelects() {
+            const currencyOptionsHTML = Object.entries(currencySymbols)
+                .map(([code, { name }]) => `<option value="${code}">${code} - ${name}</option>`)
+                .join('');
+            prodCurrencySelect.innerHTML = currencyOptionsHTML;
+            document.getElementById('edit-prod-currency').innerHTML = currencyOptionsHTML;
+        }
+
+        function populateDynamicFilters() {
+            // categories for suggestions
+            const categories = [...new Set(products.map(p => p.category))].sort();
+            // attach data-list for later use
+            categoryFilter.__availableCategories = categories;
+            // currency select (unchanged)
+            const currentCurrency = currencyFilter.value;
+            currencyFilter.innerHTML = '<option value="all">Todas</option>';
+            [...new Set(products.map(p => p.currency))].sort().forEach(value => {
+                const option = document.createElement('option'); option.value = value; option.textContent = value; currencyFilter.appendChild(option);
+            });
+            if ([...currencyFilter.options].some(o=>o.value===currentCurrency)) currencyFilter.value = currentCurrency;
+        };
+        
+        // Paginación
+        let currentPage = 1;
+        let pageSize = 10;
+        const pageSizeSelect = document.getElementById('page-size');
+        const pagePrevBtn = document.getElementById('page-prev');
+        const pageNextBtn = document.getElementById('page-next');
+        const pageInfo = document.getElementById('page-info');
+
+        function updatePaginationControls(totalItems) {
+            const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+            currentPage = Math.min(currentPage, totalPages);
+            pagePrevBtn.disabled = currentPage <= 1;
+            pageNextBtn.disabled = currentPage >= totalPages;
+            const start = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+            const end = Math.min(totalItems, currentPage * pageSize);
+            pageInfo.textContent = `${start}-${end} de ${totalItems}`;
+        }
+
+        function paginate(list) {
+            const start = (currentPage - 1) * pageSize;
+            return list.slice(start, start + pageSize);
+        }
+
+        function renderTable(productsToRender) {
+            tableBody.innerHTML = '';
+            productCount.textContent = `${productsToRender.length} de ${products.length} productos mostrados.`;
+            if (productsToRender.length === 0) {
+                noResults.classList.remove('hidden');
+                updatePaginationControls(0);
+                return;
+            }
+            noResults.classList.add('hidden');
+            updatePaginationControls(productsToRender.length);
+            
+            const showThumbs = localStorage.getItem('showThumbs') === '1';
+            const pageItems = paginate(productsToRender);
+            
+            pageItems.forEach(product => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-slate-50 transition-colors';
+                row.dataset.id = product.id;
+                const symbol = currencySymbols[product.currency]?.symbol || product.currency;
+                
+                // Si se muestran miniaturas, ocultamos el botón de foto en acciones
+                let photoBtn = '';
+                if (!showThumbs) {
+                    photoBtn = product.photoKey
+                        ? `<button data-action="photo" class="p-2 text-slate-500 hover:text-emerald-600 hover:bg-emerald-100 rounded-md transition" title="Ver foto">${icons.photo}</button>`
+                        : `<button data-action="photo" class="p-2 text-slate-300 rounded-md cursor-not-allowed" title="Sin foto" disabled>${icons.photo}</button>`;
+                }
+                
+                let thumbHtml = '';
+                if (showThumbs) {
+                    if (product.photoKey) {
+                        // La miniatura actúa como botón para ver la foto
+                        thumbHtml = `<button data-action="photo" class="w-10 h-10 rounded bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200 shrink-0 hover:ring-2 hover:ring-blue-400 transition focus:outline-none" title="Ver foto">
+                            <img data-photo-key="${product.photoKey}" class="w-full h-full object-cover opacity-0 transition-opacity duration-300" alt="Foto" onload="this.classList.remove('opacity-0')">
+                        </button>`;
+                    } else {
+                        thumbHtml = `<div class="w-10 h-10 rounded bg-slate-50 flex items-center justify-center border border-slate-100 shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        </div>`;
+                    }
+                }
+
+                row.innerHTML = `
+                    <td class="p-3 text-sm text-slate-500 text-center">${highlightMatches(product.id, lastHighlightTokens.code)}</td>
+                    <td class="p-3 font-medium">
+                        <div class="flex items-center gap-3">
+                            ${thumbHtml}
+                            <span>${highlightMatches(product.name, lastHighlightTokens.name)}</span>
+                        </div>
+                    </td>
+                    <td class="p-3 text-sm text-slate-500 text-center">${highlightMatches(product.brand || '', lastHighlightTokens.brand)}</td>
+                    <td class="p-3 text-center" data-cell="price"><span class="price-text font-semibold text-blue-700">${symbol}${product.price.toFixed(2)}</span></td>
+                    <td class="p-3 text-center"><span class="inline-block px-2 py-1 text-xs font-semibold text-slate-600 bg-slate-200 rounded-md text-center badge">${highlightMatches(product.category, lastHighlightTokens.category)}</span></td>
+                    <td class="p-3 text-center" data-cell="actions">
+                        ${photoBtn}
+                        <button data-action="edit" class="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-100 rounded-md transition" title="Editar">${icons.edit}</button>
+                        <button data-action="delete" class="btn-delete p-2 rounded-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900">${icons.delete}</button>
+                    </td>`;
+                tableBody.appendChild(row);
+            });
+            
+            // Cargar imágenes asíncronamente
+            if (showThumbs) {
+                const imgs = tableBody.querySelectorAll('img[data-photo-key]');
+                imgs.forEach(async (img) => {
+                    try {
+                        const url = await getImageURL(img.dataset.photoKey);
+                        if (url) img.src = url;
+                        else img.src = 'icons/icon-192.png'; // Fallback
+                    } catch {
+                        img.src = 'icons/icon-192.png';
+                    }
+                });
+            }
+        }
+        
+        function applyFiltersAndSort() { 
+            let filtered = [...products]; 
+            // Búsqueda por palabras: campo 1 (código) y campo 2 (nombre)
+            const tokensCode = tokenizeQuery(searchCodeInput.value);
+            if (tokensCode.length) {
+                filtered = filtered.filter(p => {
+                    const haystack = normalizeText(p.id);
+                    return tokensCode.every(t => haystack.includes(t));
+                });
+            }
+            const tokensName = tokenizeQuery(searchNameInput.value);
+            if (tokensName.length) {
+                filtered = filtered.filter(p => {
+                    const haystack = normalizeText(p.name);
+                    return tokensName.every(t => haystack.includes(t));
+                });
+            }
+            const tokensBrand = tokenizeQuery(searchBrandInput.value);
+            if (tokensBrand.length) {
+                filtered = filtered.filter(p => {
+                    const brandText = buildBrandSearchText(p);
+                    return tokensBrand.every(t => brandText.includes(t));
+                });
+            }
+            const catValRaw = (categoryFilter.value || '').toString().trim();
+            // Normalizar: quitar acentos y comparar en minúsculas
+            const catVal = catValRaw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            if (catVal) { filtered = filtered.filter(p => (p.category || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(catVal)); }
+            if (currencyFilter.value !== 'all') { filtered = filtered.filter(p => p.currency === currencyFilter.value); } 
+            const minPrice = parseFloat(minPriceInput.value); 
+            const maxPrice = parseFloat(maxPriceInput.value); 
+            const exactPrice = parseFloat(exactPriceInput.value); 
+            if (!isNaN(exactPrice) && exactPriceInput.value !== '') { 
+                filtered = filtered.filter(p => Math.abs(p.price - exactPrice) < 0.001); 
+            } else { 
+                if (!isNaN(minPrice)) { filtered = filtered.filter(p => p.price >= minPrice); } 
+                if (!isNaN(maxPrice)) { filtered = filtered.filter(p => p.price <= maxPrice); } 
+            } 
+            // Apply sorting
+            if (priceSort.value === 'asc') {
+                filtered.sort((a, b) => a.price - b.price);
+            } else if (priceSort.value === 'desc') {
+                filtered.sort((a, b) => b.price - a.price);
+            } else {
+                // Use sort menu state when not sorting by price
+                const collator = new Intl.Collator('es', { sensitivity: 'base', numeric: true });
+                const cmp = (A, B) => collator.compare((A || '').toString(), (B || '').toString());
+                const dir = currentSort.dir === 'desc' ? -1 : 1;
+                if (currentSort.by === 'brand') {
+                    filtered.sort((a, b) => {
+                        const r = cmp(a.brand, b.brand);
+                        if (r !== 0) return dir * r;
+                        return dir * cmp(a.name, b.name); // secondary by name
+                    });
+                } else if (currentSort.by === 'category') {
+                    filtered.sort((a, b) => {
+                        const r = cmp(a.category, b.category);
+                        if (r !== 0) return dir * r;
+                        return dir * cmp(a.name, b.name); // secondary by name
+                    });
+                } else {
+                    // name
+                    filtered.sort((a, b) => dir * cmp(a.name, b.name));
+                }
+            }
+            // Guardar tokens para resaltado en celdas
+            lastHighlightTokens = {
+                code: tokensCode,
+                name: tokensName,
+                brand: tokensBrand,
+                category: catVal ? [catVal] : []
+            };
+            renderTable(filtered); 
+            saveFiltersToStorage();
+        }
+
+        // Mostrar/ocultar el botón X personalizado de la barra de búsqueda
+        function updateSearchClear(input, btn) {
+            if (!btn) return;
+            const hasText = !!(input && input.value && input.value.trim().length);
+            btn.classList.toggle('hidden', !hasText);
+        }
+
+        // Actualiza la etiqueta a la derecha del botón Marcas con la marca seleccionada o 'Ninguna'
+        function updateBrandSelectedLabel() {
+            if (!brandSelectedLabel) return;
+            const val = (searchBrandInput?.value || '').trim();
+            if (val) {
+                brandSelectedLabel.classList.add('hidden');
+                if (brandChipText) brandChipText.textContent = val;
+                if (brandChip) brandChip.classList.remove('hidden');
+            } else {
+                brandSelectedLabel.textContent = 'Ninguna';
+                brandSelectedLabel.classList.remove('hidden');
+                if (brandChip) brandChip.classList.add('hidden');
+            }
+        }
+
+        // Debounce para búsqueda y filtros rápidos
+        function debounce(fn, delay = 250) {
+            let t;
+            return (...args) => {
+                clearTimeout(t);
+                t = setTimeout(() => fn(...args), delay);
+            };
+        }
+    const applyFiltersAndSortDebounced = debounce(() => { currentPage = 1; applyFiltersAndSort(); }, 200);
+        
+        function handleTableClick(e) {
+            const button = e.target.closest('button[data-action]');
+            if (!button) return;
+            const action = button.dataset.action;
+            const row = button.closest('tr');
+            const productId = row.dataset.id;
+
+            if (action === 'photo') {
+                const product = products.find(p => p.id === productId);
+                if (product && product.photoKey) openPhotoModalByKey(product.photoKey);
+                return;
+            }
+            else if (action === 'edit') openEditModal(productId);
+            else if (action === 'delete') openDeleteModal(productId);
+        }
+        
+        function validateFormInput(formType) {
+            const isEdit = formType === 'edit';
+            const idInput = isEdit ? document.getElementById('edit-prod-id') : prodIdInput;
+            const nameInput = isEdit ? document.getElementById('edit-prod-name') : prodNameInput;
+            const idError = isEdit ? document.getElementById('edit-prod-id-error') : prodIdError;
+            const nameError = isEdit ? document.getElementById('edit-prod-name-error') : prodNameError;
+            const saveBtn = isEdit ? saveEditBtn : saveProductBtn;
+            const originalId = isEdit ? document.getElementById('edit-prod-original-id').value : null;
+            const originalName = isEdit ? document.getElementById('edit-prod-original-name').value : null;
+
+            const idValue = idInput.value.trim().toLowerCase();
+            const nameValue = nameInput.value.trim().toLowerCase();
+            let isIdInvalid = false;
+            let isNameInvalid = false;
+
+            if (idValue) {
+                isIdInvalid = products.some(p => p.id.toLowerCase() === idValue && idValue !== originalId?.toLowerCase());
+                idError.textContent = isIdInvalid ? 'Este código ya existe.' : '';
+                idInput.classList.toggle('border-red-500', isIdInvalid);
+            } else {
+                idError.textContent = '';
+                idInput.classList.remove('border-red-500');
+            }
+
+            // Detectar nombre duplicado pero NO bloquear el guardado: mostramos una advertencia inline
+            let isNameDuplicate = false;
+            if (nameValue) {
+                isNameDuplicate = products.some(p => p.name.toLowerCase() === nameValue && nameValue !== originalName?.toLowerCase());
+                if (isNameDuplicate) {
+                    nameError.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="inline-block w-4 h-4 mr-1 align-middle text-amber-700"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.29 3.86L1.82 18a1 1 0 0 0 .86 1.5h18.64a1 1 0 0 0 .86-1.5L13.71 3.86a1 1 0 0 0-1.42 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v4m0 4h.01"/></svg><span class="font-semibold">Advertencia:</span> ya existe otro producto con este nombre.';
+                } else {
+                    nameError.innerHTML = '';
+                }
+                // ajustar clases para mostrar advertencia en amarillo y quitar rojo si existiera
+                nameError.classList.toggle('text-amber-700', isNameDuplicate);
+                nameError.classList.toggle('text-red-600', false);
+                nameInput.classList.toggle('border-amber-300', isNameDuplicate);
+                nameInput.classList.remove('border-red-500');
+            } else {
+                nameError.innerHTML = '';
+                nameError.classList.toggle('text-amber-700', false);
+                nameInput.classList.remove('border-amber-300');
+                nameInput.classList.remove('border-red-500');
+            }
+
+            // Solo consideramos inválido el formulario si el ID es inválido
+            const isInvalid = isIdInvalid;
+            saveBtn.disabled = isInvalid;
+            saveBtn.classList.toggle('opacity-50', isInvalid);
+            saveBtn.classList.toggle('cursor-not-allowed', isInvalid);
+            
+            return !isInvalid;
+            if(upperId && name && brand && !isNaN(price) && category && currency) { products.unshift({ id: upperId, name, brand, price, category, currency, photo: addPhotoDataUrl || undefined }); saveProducts(); refreshUI(); closeAddModal(); }
+        }
+        
+        function updateSuggestions(input, suggestionsContainer, property, options = {}) {
+            const { showAllWhenEmpty = false, forceOpen = false } = options;
+            const value = (input.value || '').trim();
+            const shouldOpen = forceOpen || document.activeElement === input;
+            suggestionsContainer.innerHTML = '';
+
+            // Construir lista única y ordenada
+            const uniqueValues = [...new Set(products.map(p => p[property]).filter(Boolean))];
+            const collator = new Intl.Collator('es', { sensitivity: 'base', numeric: true });
+
+            // Si no hay valor y no se requiere mostrar todo, ocultar
+            if (!value && !showAllWhenEmpty) {
+                suggestionsContainer.classList.add('hidden');
+                return;
+            }
+
+            let valuesToShow;
+            if (!value) {
+                // Mostrar todas si el input está/enfocado o se fuerza la apertura
+                if (!shouldOpen) { suggestionsContainer.classList.add('hidden'); return; }
+                valuesToShow = [...uniqueValues].sort((a, b) => collator.compare(a, b));
+            } else {
+                const normVal = normalizeText(value);
+                valuesToShow = uniqueValues
+                    .filter(val => normalizeText(val).includes(normVal))
+                    .sort((a, b) => collator.compare(a, b));
+            }
+
+            if (valuesToShow.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'p-2 text-sm text-slate-500';
+                empty.textContent = 'No hay coincidencias';
+                suggestionsContainer.appendChild(empty);
+                suggestionsContainer.classList.remove('hidden');
+                return;
+            }
+
+            const tokens = tokenizeQuery(value);
+            valuesToShow.forEach(val => {
+                const suggestionItem = document.createElement('div');
+                suggestionItem.className = 'p-2 hover:bg-slate-100 cursor-pointer text-sm';
+                suggestionItem.innerHTML = tokens.length ? highlightMatches(val, tokens) : escapeHTML(val);
+                suggestionItem.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    input.value = val;
+                    suggestionsContainer.classList.add('hidden');
+                });
+                suggestionsContainer.appendChild(suggestionItem);
+            });
+            if (shouldOpen) suggestionsContainer.classList.remove('hidden');
+        }
+        
+        async function handleAddProduct(e) {
+            e.preventDefault();
+            if (!validateFormInput('add')) { addProductForm.classList.add('form-error-shake'); setTimeout(() => addProductForm.classList.remove('form-error-shake'), 600); return; }
+            const id = prodIdInput.value.trim();
+            const name = prodNameInput.value.trim();
+            const brand = prodBrandInput.value.trim();
+            const price = parseFloat(document.getElementById('prod-price').value);
+            const currency = prodCurrencySelect.value;
+            const category = addCategoryInput.value.trim();
+            const upperId = id.toUpperCase();
+            let photoKey;
+            if (addPhotoDataUrl) {
+                try { photoKey = await saveImageFromDataURL(addPhotoDataUrl); } catch (e) { console.warn('No se pudo guardar la foto en IndexedDB', e); }
+            }
+            if(upperId && name && brand && !isNaN(price) && category && currency) {
+                products.unshift({ id: upperId, name, brand, price, category, currency, photoKey });
+                saveProducts(); refreshUI(); closeAddModal();
+            }
+        }
+
+        async function handleEditProduct(e) {
+            e.preventDefault();
+            if (!validateFormInput('edit')) { editProductForm.classList.add('form-error-shake'); setTimeout(() => editProductForm.classList.remove('form-error-shake'), 600); return; }
+            const productIndex = products.findIndex(p => p.id === productToEditId);
+            if (productIndex === -1) return;
+
+            const current = products[productIndex];
+            let photoKey = current.photoKey;
+            try {
+                if (editRemovePhoto && photoKey) { await deleteImage(photoKey); photoKey = undefined; }
+                else if (editPhotoDataUrl) {
+                    if (photoKey) { try { await deleteImage(photoKey); } catch {} }
+                    photoKey = await saveImageFromDataURL(editPhotoDataUrl);
+                }
+            } catch (err) { console.warn('Edición de foto falló', err); }
+
+            products[productIndex] = {
+                id: document.getElementById('edit-prod-id').value.trim().toUpperCase(),
+                name: document.getElementById('edit-prod-name').value.trim(),
+                brand: document.getElementById('edit-prod-brand').value.trim(),
+                price: parseFloat(document.getElementById('edit-prod-price').value),
+                currency: document.getElementById('edit-prod-currency').value,
+                category: editCategoryInput.value.trim(),
+                photoKey
+            };
+            saveProducts();
+            refreshUI();
+            closeEditModal();
+        }
+        
+        async function handleDeleteProduct() {
+            const prodIndex = products.findIndex(p => p.id === productToDeleteId);
+            if (prodIndex === -1) return;
+            
+            const deletedProduct = products[prodIndex];
+            // No borramos la imagen inmediatamente para permitir deshacer
+            
+            products.splice(prodIndex, 1);
+            saveProducts();
+            refreshUI();
+            closeDeleteModal();
+            
+            showToast('Producto eliminado', 'success', 5000, {
+                text: 'Deshacer',
+                callback: () => {
+                    // Reinsertar en la misma posición si es posible, o al final
+                    if (prodIndex >= 0 && prodIndex <= products.length) {
+                        products.splice(prodIndex, 0, deletedProduct);
+                    } else {
+                        products.push(deletedProduct);
+                    }
+                    saveProducts();
+                    refreshUI();
+                    showToast('Acción deshecha', 'info');
+                }
+            });
+        }
+        
+        let lastFocusedElement = null;
+        const focusableSelector = 'a[href], button, textarea, input, select, [tabindex]:not([tabindex="-1"])';
+        function trapFocus(modal) {
+            const focusables = Array.from(modal.querySelectorAll(focusableSelector)).filter(el => !el.hasAttribute('disabled'));
+            if (focusables.length === 0) return () => {};
+            const first = focusables[0];
+            const last = focusables[focusables.length - 1];
+            function handler(e) {
+                if (e.key !== 'Tab') return;
+                if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+                else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+            }
+            modal.addEventListener('keydown', handler);
+            return () => modal.removeEventListener('keydown', handler);
+        }
+        let removeTrapFn = () => {};
+        // Bloqueo del scroll de fondo mientras haya modales abiertos
+        let bodyScrollLocks = 0;
+        function lockBodyScroll() {
+            bodyScrollLocks++;
+            document.body.classList.add('modal-open');
+        }
+        function unlockBodyScroll() {
+            bodyScrollLocks = Math.max(0, bodyScrollLocks - 1);
+            if (bodyScrollLocks === 0) document.body.classList.remove('modal-open');
+        }
+
+        let editPreviewObjectURL = null;
+        let currentPhotoObjectURL = null;
+
+        function openAddModal() {
+            addModal.classList.add('is-open');
+            prodCurrencySelect.value = 'NIO';
+            lastFocusedElement = document.activeElement;
+            requestAnimationFrame(() => prodIdInput.focus());
+            lockBodyScroll();
+            // Reset foto
+            addPhotoDataUrl = null;
+            addPhotoPreview.src = '';
+            addPhotoPreview.classList.add('hidden');
+            addPhotoRemoveBtn.classList.add('hidden');
+            addPhotoInput.value = '';
+            document.getElementById('add-photo-name').textContent = 'Sin archivos seleccionados';
+            addPhotoError.textContent = '';
+            removeTrapFn = trapFocus(addModal);
+        }
+        function closeAddModal() {
+            addModal.classList.remove('is-open');
+            addProductForm.reset();
+            validateFormInput('add');
+            addCategorySuggestions.classList.add('hidden');
+            addBrandSuggestions.classList.add('hidden');
+            unlockBodyScroll();
+            // Reset foto
+            addPhotoDataUrl = null;
+            addPhotoPreview.src = '';
+            addPhotoPreview.classList.add('hidden');
+            addPhotoRemoveBtn.classList.add('hidden');
+            addPhotoInput.value = '';
+            document.getElementById('add-photo-name').textContent = 'Sin archivos seleccionados';
+            addPhotoError.textContent = '';
+            removeTrapFn();
+            if (lastFocusedElement) lastFocusedElement.focus();
+        }
+
+        function openEditModal(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+            productToEditId = productId;
+            document.getElementById('edit-prod-original-id').value = product.id;
+            document.getElementById('edit-prod-original-name').value = product.name;
+            document.getElementById('edit-prod-id').value = product.id;
+            document.getElementById('edit-prod-name').value = product.name;
+            document.getElementById('edit-prod-brand').value = product.brand || '';
+            document.getElementById('edit-prod-price').value = product.price;
+            document.getElementById('edit-prod-currency').value = product.currency;
+            editCategoryInput.value = product.category;
+            // Foto actual
+            editPhotoDataUrl = null;
+            editRemovePhoto = false;
+            if (editPreviewObjectURL) { URL.revokeObjectURL(editPreviewObjectURL); editPreviewObjectURL = null; }
+            
+            const editPhotoTrigger = document.getElementById('edit-photo-trigger');
+            const editPhotoName = document.getElementById('edit-photo-name');
+
+            if (product.photoKey) {
+                getImageURL(product.photoKey).then(url => {
+                    if (!url) return;
+                    editPreviewObjectURL = url;
+                    editPhotoPreview.src = url;
+                    editPhotoPreview.classList.remove('hidden');
+                    editPhotoRemoveBtn.classList.remove('hidden');
+                    
+                    // Ocultar input container y mostrar botón cambiar
+                    editPhotoTrigger.classList.add('hidden');
+                    editPhotoName.classList.add('hidden');
+                    editPhotoChangeBtn.classList.remove('hidden');
+                }).catch(() => {});
+            } else {
+                editPhotoPreview.src = '';
+                editPhotoPreview.classList.add('hidden');
+                editPhotoRemoveBtn.classList.add('hidden');
+                
+                // Mostrar input container y ocultar botón cambiar
+                editPhotoTrigger.classList.remove('hidden');
+                editPhotoName.classList.remove('hidden');
+                editPhotoChangeBtn.classList.add('hidden');
+            }
+            editPhotoInput.value = '';
+            editPhotoName.textContent = 'Sin archivos seleccionados';
+            editPhotoError.textContent = '';
+            validateFormInput('edit');
+            editModal.classList.add('is-open');
+            lockBodyScroll();
+            lastFocusedElement = document.activeElement;
+            requestAnimationFrame(() => document.getElementById('edit-prod-id').focus());
+            removeTrapFn = trapFocus(editModal);
+        }
+        function closeEditModal() {
+            editModal.classList.remove('is-open');
+            editProductForm.reset();
+            editCategorySuggestions.classList.add('hidden');
+            editBrandSuggestions.classList.add('hidden');
+            unlockBodyScroll();
+            // Reset foto
+            editPhotoDataUrl = null;
+            editRemovePhoto = false;
+            if (editPreviewObjectURL) { URL.revokeObjectURL(editPreviewObjectURL); editPreviewObjectURL = null; }
+            editPhotoPreview.src = '';
+            editPhotoPreview.classList.add('hidden');
+            editPhotoRemoveBtn.classList.add('hidden');
+            editPhotoChangeBtn.classList.add('hidden');
+            
+            // Reset UI state
+            document.getElementById('edit-photo-trigger').classList.remove('hidden');
+            document.getElementById('edit-photo-name').classList.remove('hidden');
+            editPhotoInput.value = '';
+            document.getElementById('edit-photo-name').textContent = 'Sin archivos seleccionados';
+            
+            editPhotoError.textContent = '';
+            removeTrapFn();
+            if (lastFocusedElement) lastFocusedElement.focus();
+        }
+
+    function openDeleteModal(productId) {
+        productToDeleteId = productId;
+        deleteModal.classList.add('is-open');
+        lockBodyScroll();
+        lastFocusedElement = document.activeElement;
+        requestAnimationFrame(() => document.getElementById('confirm-delete-btn').focus());
+        removeTrapFn = trapFocus(deleteModal);
+    }
+    function closeDeleteModal() {
+        productToDeleteId = null;
+        deleteModal.classList.remove('is-open');
+        unlockBodyScroll();
+        removeTrapFn();
+        if (lastFocusedElement) lastFocusedElement.focus();
+    }
+
+        function closeModalOnOverlayClick(modal, closeFn) {
+            modal.addEventListener('click', (event) => {
+                if (event.target === modal) closeFn();
+            });
+        }
+
+        function handleEscapeKey(event) {
+            if (event.key !== 'Escape') return;
+            if (deleteModal.classList.contains('is-open')) { closeDeleteModal(); showToast('Operación cancelada', 'info'); return; }
+            if (clearAllModal && clearAllModal.classList.contains('is-open')) { closeClearAllModal(); showToast('Operación cancelada', 'info'); return; }
+            if (brandModal && brandModal.classList.contains('is-open')) { closeBrandModal(); return; }
+            if (photoModal.classList.contains('is-open')) { closePhotoModal(); }
+        }
+
+        async function processImageBlob(blob, mode) {
+            if (mode === 'add') {
+                addPhotoError.textContent = '';
+                try {
+                    addPhotoDataUrl = await resizeImageFile(blob, 800, 0.85);
+                    addPhotoPreview.src = addPhotoDataUrl;
+                    addPhotoPreview.classList.remove('hidden');
+                    addPhotoRemoveBtn.classList.remove('hidden');
+                    addPhotoInput.value = '';
+                    document.getElementById('add-photo-name').textContent = 'Imagen pegada';
+                } catch (err) {
+                    console.error(err);
+                    addPhotoError.textContent = 'Error al procesar imagen.';
+                }
+            } else {
+                editPhotoError.textContent = '';
+                try {
+                    editPhotoDataUrl = await resizeImageFile(blob, 800, 0.85);
+                    if (editPreviewObjectURL) { URL.revokeObjectURL(editPreviewObjectURL); editPreviewObjectURL = null; }
+                    editPhotoPreview.src = editPhotoDataUrl;
+                    editPhotoPreview.classList.remove('hidden');
+                    editPhotoRemoveBtn.classList.remove('hidden');
+                    
+                    // Mostrar contenedor de input si estaba oculto y ocultar botón cambiar
+                    document.getElementById('edit-photo-trigger').classList.remove('hidden');
+                    document.getElementById('edit-photo-name').classList.remove('hidden');
+                    document.getElementById('edit-photo-change-btn').classList.add('hidden');
+                    
+                    editRemovePhoto = false;
+                    editPhotoInput.value = '';
+                    document.getElementById('edit-photo-name').textContent = 'Imagen pegada';
+                } catch (err) {
+                    console.error(err);
+                    editPhotoError.textContent = 'Error al procesar imagen.';
+                }
+            }
+        }
+
+        async function handlePasteImage(e, mode) {
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            let file = null;
+            for (const item of items) {
+                if (item.type.startsWith('image/')) {
+                    file = item.getAsFile();
+                    break;
+                }
+            }
+            if (!file) return;
+            e.preventDefault();
+            await processImageBlob(file, mode);
+        }
+
+        async function handlePasteButton(mode) {
+            try {
+                const items = await navigator.clipboard.read();
+                let found = false;
+                for (const item of items) {
+                    // Buscar tipos de imagen
+                    const imageType = item.types.find(t => t.startsWith('image/'));
+                    if (imageType) {
+                        const blob = await item.getType(imageType);
+                        await processImageBlob(blob, mode);
+                        found = true;
+                        break; // Solo procesamos la primera imagen
+                    }
+                }
+                if (!found) {
+                    showToast('No se encontró ninguna imagen en el portapapeles', 'info');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('No se pudo acceder al portapapeles. Verifica permisos.', 'error');
+            }
+        }
+
+        function addEventListeners() {
+            // Paste support (Ctrl+V)
+            addModal.addEventListener('paste', (e) => handlePasteImage(e, 'add'));
+            editModal.addEventListener('paste', (e) => handlePasteImage(e, 'edit'));
+            
+            // Paste buttons (Mobile/Click)
+            const addPasteBtn = document.getElementById('add-photo-paste-btn');
+            const editPasteBtn = document.getElementById('edit-photo-paste-btn');
+            if (addPasteBtn) addPasteBtn.addEventListener('click', () => handlePasteButton('add'));
+            if (editPasteBtn) editPasteBtn.addEventListener('click', () => handlePasteButton('edit'));
+
+            // input: actualiza mientras se escribe y controla visibilidad de la X
+            searchCodeInput.addEventListener('input', () => { updateSearchClear(searchCodeInput, clearCodeBtn); applyFiltersAndSortDebounced(); });
+            searchCodeInput.addEventListener('search', () => { currentPage = 1; applyFiltersAndSort(); updateSearchClear(searchCodeInput, clearCodeBtn); });
+            if (clearCodeBtn) {
+                clearCodeBtn.addEventListener('click', () => {
+                    searchCodeInput.value = '';
+                    updateSearchClear(searchCodeInput, clearCodeBtn);
+                    currentPage = 1;
+                    applyFiltersAndSort();
+                    searchCodeInput.focus();
+                });
+            }
+            searchNameInput.addEventListener('input', () => { updateSearchClear(searchNameInput, clearNameBtn); applyFiltersAndSortDebounced(); });
+            searchNameInput.addEventListener('search', () => { currentPage = 1; applyFiltersAndSort(); updateSearchClear(searchNameInput, clearNameBtn); });
+            if (clearNameBtn) {
+                clearNameBtn.addEventListener('click', () => {
+                    searchNameInput.value = '';
+                    updateSearchClear(searchNameInput, clearNameBtn);
+                    currentPage = 1;
+                    applyFiltersAndSort();
+                    searchNameInput.focus();
+                });
+            }
+            searchBrandInput.addEventListener('input', () => { updateBrandSelectedLabel(); applyFiltersAndSortDebounced(); });
+            const brandListBtn = document.getElementById('brand-list-btn');
+            if (brandListBtn) {
+                brandListBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    openBrandModal();
+                });
+            }
+            if (brandChip) {
+                brandChip.addEventListener('click', () => {
+                    if (searchBrandInput) searchBrandInput.value = '';
+                    updateBrandSelectedLabel();
+                    currentPage = 1;
+                    applyFiltersAndSort();
+                });
+            }
+            // Category input: mostrar todas las categorías al enfocar y filtrar mientras escribes
+            categoryFilter.addEventListener('focus', () => { renderCategorySuggestions(categoryFilter.value, { forceOpen: true }); });
+            categoryFilter.addEventListener('input', () => { renderCategorySuggestions(categoryFilter.value, { forceOpen: true }); currentPage = 1; applyFiltersAndSortDebounced(); });
+            categoryFilter.addEventListener('blur', () => setTimeout(() => { const list = document.getElementById('category-filter-suggestions'); if (list) list.classList.add('hidden'); }, 150));
+            // currency and priceSort remain as before
+            [currencyFilter, priceSort].forEach(el => { el.addEventListener('change', () => { currentPage = 1; applyFiltersAndSort(); }); });
+            minPriceInput.addEventListener('input', () => { if (minPriceInput.value) exactPriceInput.value = ''; applyFiltersAndSortDebounced(); });
+            maxPriceInput.addEventListener('input', () => { if (maxPriceInput.value) exactPriceInput.value = ''; applyFiltersAndSortDebounced(); });
+            exactPriceInput.addEventListener('input', () => { if (exactPriceInput.value) { minPriceInput.value = ''; maxPriceInput.value = ''; } applyFiltersAndSortDebounced(); });
+            clearFiltersBtn.addEventListener('click', () => {
+                // Detectar si hay filtros activos antes de limpiar
+                const hasActiveFilters = (
+                    (searchCodeInput.value || '').trim() !== '' ||
+                    (searchNameInput.value || '').trim() !== '' ||
+                    (searchBrandInput.value || '').trim() !== '' ||
+                    (categoryFilter.value || '').trim() !== '' ||
+                    (currencyFilter.value || 'all') !== 'all' ||
+                    (minPriceInput.value || '') !== '' ||
+                    (maxPriceInput.value || '') !== '' ||
+                    (exactPriceInput.value || '') !== '' ||
+                    (priceSort.value || 'default') !== 'default'
+                );
+
+                // Limpiar todos los filtros
+                searchCodeInput.value = '';
+                searchNameInput.value = '';
+                searchBrandInput.value = '';
+                categoryFilter.value = '';
+                currencyFilter.value = 'all';
+                minPriceInput.value = '';
+                maxPriceInput.value = '';
+                exactPriceInput.value = '';
+                priceSort.value = 'default';
+
+                // Actualizar UI dependiente
+                updateSearchClear(searchCodeInput, clearCodeBtn);
+                updateSearchClear(searchNameInput, clearNameBtn);
+                updateBrandSelectedLabel();
+                currentPage = 1;
+                applyFiltersAndSort();
+
+                // Mostrar toast en ambos casos
+                if (hasActiveFilters) {
+                    showToast('Filtros limpiados', 'success');
+                } else {
+                    showToast('No hay filtros activos', 'info');
+                }
+            });
+            toggleFiltersBtn.addEventListener('click', () => {
+                const isOpen = !filterGrid.classList.contains('max-h-0');
+                if (isOpen) {
+                    // Close
+                    filterGrid.classList.add('max-h-0');
+                    filterGrid.classList.remove('max-h-96');
+                    filterGrid.classList.remove('max-h-[80vh]');
+                    filterGrid.classList.remove('overflow-y-auto');
+                    filterGrid.classList.add('overflow-hidden');
+                    filterChevron.classList.remove('rotate-180');
+                    toggleFiltersBtn.setAttribute('aria-expanded', 'false');
+                } else {
+                    // Open
+                    filterGrid.classList.remove('max-h-0');
+                    // En móvil, permitir scroll interno para ver todos los filtros
+                    filterGrid.classList.remove('overflow-hidden');
+                    filterGrid.classList.add('overflow-y-auto');
+                    filterGrid.classList.remove('max-h-96');
+                    filterGrid.classList.add('max-h-[80vh]');
+                    filterChevron.classList.add('rotate-180');
+                    toggleFiltersBtn.setAttribute('aria-expanded', 'true');
+                }
+            });
+            tableBody.addEventListener('click', handleTableClick);
+            // Paginación
+            pageSizeSelect.addEventListener('change', () => { pageSize = parseInt(pageSizeSelect.value, 10) || 10; currentPage = 1; applyFiltersAndSort(); });
+            pagePrevBtn.addEventListener('click', () => { if (currentPage > 1) { currentPage--; applyFiltersAndSort(); } });
+            pageNextBtn.addEventListener('click', () => { currentPage++; applyFiltersAndSort(); });
+            
+            addProductBtn.addEventListener('click', openAddModal);
+            cancelAddBtn.addEventListener('click', closeAddModal);
+            addProductForm.addEventListener('submit', handleAddProduct);
+            prodIdInput.addEventListener('input', () => { prodIdInput.value = prodIdInput.value.toUpperCase(); validateFormInput('add'); });
+            prodNameInput.addEventListener('input', () => validateFormInput('add'));
+            // Categoría (ADD): mostrar todas al enfocar y filtrar mientras se escribe
+            addCategoryInput.addEventListener('focus', () => updateSuggestions(addCategoryInput, addCategorySuggestions, 'category', { showAllWhenEmpty: true, forceOpen: true }));
+            addCategoryInput.addEventListener('input', () => updateSuggestions(addCategoryInput, addCategorySuggestions, 'category', { showAllWhenEmpty: true }));
+            addCategoryInput.addEventListener('blur', () => setTimeout(() => addCategorySuggestions.classList.add('hidden'), 150));
+            prodBrandInput.addEventListener('input', () => updateSuggestions(prodBrandInput, addBrandSuggestions, 'brand'));
+            prodBrandInput.addEventListener('blur', () => setTimeout(() => addBrandSuggestions.classList.add('hidden'), 150));
+
+            cancelEditBtn.addEventListener('click', closeEditModal);
+            editProductForm.addEventListener('submit', handleEditProduct);
+            document.getElementById('edit-prod-id').addEventListener('input', () => { const el = document.getElementById('edit-prod-id'); el.value = el.value.toUpperCase(); validateFormInput('edit'); });
+            document.getElementById('edit-prod-name').addEventListener('input', () => validateFormInput('edit'));
+            // Categoría (EDIT): mostrar todas al enfocar y filtrar mientras se escribe
+            editCategoryInput.addEventListener('focus', () => updateSuggestions(editCategoryInput, editCategorySuggestions, 'category', { showAllWhenEmpty: true, forceOpen: true }));
+            editCategoryInput.addEventListener('input', () => updateSuggestions(editCategoryInput, editCategorySuggestions, 'category', { showAllWhenEmpty: true }));
+            editCategoryInput.addEventListener('blur', () => setTimeout(() => editCategorySuggestions.classList.add('hidden'), 150));
+            editBrandInput.addEventListener('input', () => updateSuggestions(editBrandInput, editBrandSuggestions, 'brand'));
+            editBrandInput.addEventListener('blur', () => setTimeout(() => editBrandSuggestions.classList.add('hidden'), 150));
+
+            confirmDeleteBtn.addEventListener('click', handleDeleteProduct);
+            cancelDeleteBtn.addEventListener('click', () => { closeDeleteModal(); showToast('Operación cancelada', 'info'); });
+            // Foto: agregar
+            const addPhotoTrigger = document.getElementById('add-photo-trigger');
+            const addPhotoName = document.getElementById('add-photo-name');
+            if (addPhotoTrigger) addPhotoTrigger.addEventListener('click', () => addPhotoInput.click());
+
+            addPhotoInput.addEventListener('change', async () => {
+                addPhotoError.textContent = '';
+                const file = addPhotoInput.files?.[0];
+                if (file) {
+                    addPhotoName.textContent = file.name;
+                } else {
+                    addPhotoName.textContent = 'Sin archivos seleccionados';
+                    addPhotoDataUrl = null; addPhotoPreview.src=''; addPhotoPreview.classList.add('hidden'); addPhotoRemoveBtn.classList.add('hidden'); return;
+                }
+                try {
+                    addPhotoDataUrl = await resizeImageFile(file, 800, 0.85);
+                    addPhotoPreview.src = addPhotoDataUrl;
+                    addPhotoPreview.classList.remove('hidden');
+                    addPhotoRemoveBtn.classList.remove('hidden');
+                } catch (err) {
+                    console.error(err);
+                    addPhotoError.textContent = 'No se pudo procesar la imagen.';
+                    addPhotoDataUrl = null;
+                }
+            });
+            addPhotoRemoveBtn.addEventListener('click', () => {
+                addPhotoDataUrl = null;
+                addPhotoPreview.src = '';
+                addPhotoPreview.classList.add('hidden');
+                addPhotoRemoveBtn.classList.add('hidden');
+                addPhotoInput.value = '';
+                addPhotoName.textContent = 'Sin archivos seleccionados';
+            });
+
+            // Foto: editar
+            const editPhotoTrigger = document.getElementById('edit-photo-trigger');
+            const editPhotoName = document.getElementById('edit-photo-name');
+            // const editPhotoInputContainer = document.getElementById('edit-photo-input-container'); // Ya no existe
+            if (editPhotoTrigger) editPhotoTrigger.addEventListener('click', () => editPhotoInput.click());
+
+            editPhotoInput.addEventListener('change', async () => {
+                editPhotoError.textContent = '';
+                const file = editPhotoInput.files?.[0];
+                if (file) {
+                    editPhotoName.textContent = file.name;
+                } else {
+                    editPhotoName.textContent = 'Sin archivos seleccionados';
+                    editPhotoDataUrl = null; return;
+                }
+                try {
+                    editPhotoDataUrl = await resizeImageFile(file, 800, 0.85);
+                    if (editPreviewObjectURL) { URL.revokeObjectURL(editPreviewObjectURL); editPreviewObjectURL = null; }
+                    editPhotoPreview.src = editPhotoDataUrl;
+                    editPhotoPreview.classList.remove('hidden');
+                    editPhotoRemoveBtn.classList.remove('hidden');
+                    
+                    // Al seleccionar nueva foto, ocultamos botón cambiar (si estaba visible) y mostramos input container
+                    editPhotoTrigger.classList.remove('hidden');
+                    editPhotoName.classList.remove('hidden');
+                    editPhotoChangeBtn.classList.add('hidden');
+                    
+                    editRemovePhoto = false;
+                } catch (err) {
+                    console.error(err);
+                    editPhotoError.textContent = 'No se pudo procesar la imagen.';
+                    editPhotoDataUrl = null;
+                }
+            });
+            editPhotoChangeBtn.addEventListener('click', () => {
+                // Al dar click en cambiar, ocultamos el botón y mostramos el input container
+                editPhotoChangeBtn.classList.add('hidden');
+                editPhotoTrigger.classList.remove('hidden');
+                editPhotoName.classList.remove('hidden');
+                // Opcional: abrir dialogo inmediatamente
+                // editPhotoInput.click(); 
+            });
+            editPhotoRemoveBtn.addEventListener('click', () => {
+                editRemovePhoto = true;
+                editPhotoDataUrl = null;
+                if (editPreviewObjectURL) { URL.revokeObjectURL(editPreviewObjectURL); editPreviewObjectURL = null; }
+                editPhotoPreview.src = '';
+                editPhotoPreview.classList.add('hidden');
+                editPhotoRemoveBtn.classList.add('hidden');
+                
+                // Al quitar foto, mostramos input container y ocultamos botón cambiar
+                editPhotoTrigger.classList.remove('hidden');
+                editPhotoName.classList.remove('hidden');
+                editPhotoChangeBtn.classList.add('hidden');
+                
+                editPhotoInput.value = '';
+                editPhotoName.textContent = 'Sin archivos seleccionados';
+            });
+
+            // Modal de foto
+            closePhotoBtn.addEventListener('click', closePhotoModal);
+
+            // No permitir cerrar el modal de agregar producto ni el de editar haciendo clic fuera
+            closeModalOnOverlayClick(deleteModal, () => { closeDeleteModal(); showToast('Operación cancelada', 'info'); });
+            // if (brandModal) closeModalOnOverlayClick(brandModal, closeBrandModal); // Deshabilitado cierre por click fuera
+            if (clearAllModal) closeModalOnOverlayClick(clearAllModal, () => { closeClearAllModal(); showToast('Operación cancelada', 'info'); });
+            closeModalOnOverlayClick(photoModal, closePhotoModal);
+            document.addEventListener('keydown', handleEscapeKey);
+            // Sort menu setup
+            setSortRadiosFromState();
+            setupSortMenu();
+
+            // Eliminar todos los productos
+            if (clearAllBtn) {
+                clearAllBtn.addEventListener('click', () => {
+                    try { closeAppMenu(); } catch {}
+                    setTimeout(openClearAllModal, 320);
+                });
+            }
+            if (menuBottomClearAll) {
+                menuBottomClearAll.addEventListener('click', () => {
+                    try { closeAppMenu(); } catch {}
+                    setTimeout(openClearAllModal, 320);
+                });
+            }
+            if (cancelClearAllBtn) {
+                cancelClearAllBtn.addEventListener('click', () => {
+                    closeClearAllModal();
+                    showToast('Operación cancelada', 'info');
+                });
+            }
+            if (confirmClearAllBtn) {
+                confirmClearAllBtn.addEventListener('click', async () => {
+                    const backup = [...products];
+                    products = [];
+                    saveProducts();
+                    // No limpiamos huérfanos inmediatamente para permitir deshacer
+                    refreshUI();
+                    closeClearAllModal();
+                    showToast('Todos los productos fueron eliminados', 'success', 5000, {
+                        text: 'Deshacer',
+                        callback: () => {
+                            products = backup;
+                            saveProducts();
+                            refreshUI();
+                            showToast('Acción deshecha', 'info');
+                        }
+                    });
+                });
+            }
+
+            // Brand modal buttons
+            if (brandModalCloseBtn) brandModalCloseBtn.addEventListener('click', closeBrandModal);
+            if (brandModalCancelBtn) brandModalCancelBtn.addEventListener('click', closeBrandModal);
+            if (brandModalClearBtn) brandModalClearBtn.addEventListener('click', () => {
+                if (searchBrandInput) searchBrandInput.value = '';
+                updateBrandSelectedLabel();
+                currentPage = 1; applyFiltersAndSort();
+                closeBrandModal();
+            });
+            if (brandModalSearch) brandModalSearch.addEventListener('input', () => renderBrandModalList(brandModalSearch.value));
+
+            // Inicializar visibilidad de la X personalizada y etiqueta de marca tras restaurar estado de UI
+            updateNameCodeClear();
+            updateBrandSelectedLabel();
+        }
+
+        async function openPhotoModalByKey(photoKey) {
+            if (!photoKey) return;
+            try {
+                const url = await getImageURL(photoKey);
+                if (!url) return;
+                if (currentPhotoObjectURL) { URL.revokeObjectURL(currentPhotoObjectURL); }
+                currentPhotoObjectURL = url;
+                photoModalImg.src = url;
+            } catch {}
+            photoModal.classList.add('is-open');
+            lockBodyScroll();
+            lastFocusedElement = document.activeElement;
+            requestAnimationFrame(() => closePhotoBtn.focus());
+            removeTrapFn = trapFocus(photoModal);
+        }
+        function closePhotoModal() {
+            photoModal.classList.remove('is-open');
+            photoModalImg.src = '';
+            if (currentPhotoObjectURL) { URL.revokeObjectURL(currentPhotoObjectURL); currentPhotoObjectURL = null; }
+            unlockBodyScroll();
+            removeTrapFn();
+            if (lastFocusedElement) lastFocusedElement.focus();
+        }
+
+        // Toast helper
+        function showToast(message, type = 'info', timeout = 2800, action = null) {
+            if (!toastContainer) return;
+            const toast = document.createElement('div');
+            toast.className = `toast ${type === 'success' ? 'toast-success' : 'toast-info'} relative overflow-hidden`;
+            const iconSuccess = '<svg xmlns="http://www.w3.org/2000/svg" class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+            const iconInfo = '<svg xmlns="http://www.w3.org/2000/svg" class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="8"/></svg>';
+            const icon = type === 'success' ? iconSuccess : iconInfo;
+            toast.innerHTML = `${icon}<span>${message}</span>`;
+            
+            if (action) {
+                const btn = document.createElement('button');
+                btn.className = 'ml-3 text-sm font-bold underline hover:text-slate-100 focus:outline-none z-10 relative';
+                btn.textContent = action.text;
+                btn.onclick = () => {
+                    action.callback();
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 180);
+                };
+                toast.appendChild(btn);
+
+                // Progress bar
+                if (timeout > 0) {
+                    const progressBar = document.createElement('div');
+                    progressBar.className = 'absolute bottom-0 left-0 h-1 bg-white/50';
+                    progressBar.style.width = '100%';
+                    progressBar.style.transition = `width ${timeout}ms linear`;
+                    toast.appendChild(progressBar);
+                    requestAnimationFrame(() => {
+                        progressBar.style.width = '0%';
+                    });
+                }
+            }
+
+            toastContainer.appendChild(toast);
+            requestAnimationFrame(() => toast.classList.add('show'));
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 180);
+                }
+            }, timeout);
+        }
+
+        // Clear-all modal controls
+        function openClearAllModal() {
+            if (!clearAllModal) return;
+            clearAllModal.classList.add('is-open');
+            lockBodyScroll();
+            lastFocusedElement = document.activeElement;
+            requestAnimationFrame(() => {
+                if (confirmClearAllBtn) confirmClearAllBtn.focus();
+            });
+            removeTrapFn = trapFocus(clearAllModal);
+        }
+        function closeClearAllModal() {
+            if (!clearAllModal) return;
+            clearAllModal.classList.remove('is-open');
+            unlockBodyScroll();
+            removeTrapFn();
+            if (lastFocusedElement) lastFocusedElement.focus();
+        }
+
+            // Export Modal Elements
+            const exportModal = document.getElementById('export-modal');
+            const exportJsonBtn = document.getElementById('export-json-btn');
+            const exportPhotosBtn = document.getElementById('export-photos-btn');
+            const exportCancelBtn = document.getElementById('export-cancel-btn');
+
+            function openExportModal() {
+                exportModal.classList.add('is-open');
+                lockBodyScroll();
+                removeTrapFn = trapFocus(exportModal);
+            }
+            function closeExportModal() {
+                exportModal.classList.remove('is-open');
+                unlockBodyScroll();
+                removeTrapFn();
+                if (lastFocusedElement) lastFocusedElement.focus();
+            }
+
+            exportBtn.addEventListener('click', () => {
+                lastFocusedElement = document.activeElement;
+                openExportModal();
+            });
+
+            if (exportCancelBtn) exportCancelBtn.addEventListener('click', closeExportModal);
+
+            if (exportJsonBtn) exportJsonBtn.addEventListener('click', () => {
+                closeExportModal();
+                try {
+                    // Exportar sin blobs; incluir solo photoKey (si existe)
+                    const lightweight = products.map(({ photo, ...p }) => {
+                        const { photoKey, ...rest } = p;
+                        return photoKey ? { ...rest, photoKey } : { ...rest };
+                    });
+                    const data = JSON.stringify(lightweight, null, 2);
+                    const blob = new Blob([data], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `productos-${new Date().toISOString().slice(0,10)}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                } catch (e) {
+                    alert('No se pudo exportar los datos.');
+                }
+            });
+
+            if (exportPhotosBtn) exportPhotosBtn.addEventListener('click', async () => {
+                closeExportModal();
+                try {
+                    const full = [];
+                    for (const p of products) {
+                        const { photoKey, ...rest } = p;
+                        let photo;
+                        if (photoKey) {
+                            try {
+                                const blob = await getImageBlob(photoKey);
+                                if (blob) photo = await blobToDataURL(blob);
+                            } catch {}
+                        }
+                        full.push(photo ? { ...rest, photo } : { ...rest });
+                    }
+                    const data = JSON.stringify(full, null, 2);
+                    const blob = new Blob([data], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `productos-fotos-${new Date().toISOString().slice(0,10)}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                } catch (e) {
+                    console.error(e);
+                    alert('No se pudo exportar con fotos.');
+                }
+            });
+            const importModal = document.getElementById('import-modal');
+            const importMergeBtn = document.getElementById('import-merge-btn');
+            const importReplaceBtn = document.getElementById('import-replace-btn');
+            const importCancelBtn = document.getElementById('import-cancel-btn');
+            let importMode = 'merge';
+
+            function openImportModal() {
+                importModal.classList.add('is-open');
+                lockBodyScroll();
+                removeTrapFn = trapFocus(importModal);
+            }
+            function closeImportModal() {
+                importModal.classList.remove('is-open');
+                unlockBodyScroll();
+                removeTrapFn();
+            }
+
+            importBtn.addEventListener('click', () => openImportModal());
+            importMergeBtn.addEventListener('click', () => { importMode = 'merge'; importFileInput.click(); closeImportModal(); });
+            importReplaceBtn.addEventListener('click', () => { importMode = 'replace'; importFileInput.click(); closeImportModal(); });
+            importCancelBtn.addEventListener('click', closeImportModal);
+
+            importFileInput.addEventListener('change', async () => {
+                const file = importFileInput.files?.[0];
+                if (!file) return;
+                try {
+                    const text = await file.text();
+                    const parsed = JSON.parse(text);
+                    if (!Array.isArray(parsed)) throw new Error('El JSON debe ser un arreglo de productos.');
+
+                    let backupProducts = [];
+                    // Si es modo reemplazar, limpiamos la lista actual pero guardamos backup
+                    if (importMode === 'replace') {
+                        backupProducts = [...products];
+                        products = [];
+                    }
+
+                    const result = {
+                        processed: 0,
+                        created: 0,
+                        updated: 0,
+                        skipped: 0,
+                        duplicatesInFile: 0,
+                        invalidItems: 0,
+                        errors: [],
+                        warnings: []
+                    };
+
+                    const seenIds = new Set();
+                    const normalize = (s) => (typeof s === 'string' ? s.trim() : s);
+                    const allowedCurrencies = new Set(Object.keys(currencySymbols));
+
+                    for (let idx = 0; idx < parsed.length; idx++) {
+                        const raw = parsed[idx];
+                        const row = idx + 1;
+                        if (!raw || typeof raw !== 'object') {
+                            result.invalidItems++; result.errors.push(`Fila ${row}: elemento inválido (no es objeto).`); return;
+                        }
+                        let { id, name, brand, price, category, currency } = raw;
+                        let photo = raw && typeof raw.photo === 'string' ? raw.photo.trim() : undefined;
+                        id = normalize(id); name = normalize(name); brand = normalize(brand) || '';
+                        category = normalize(category); currency = normalize(currency);
+                        price = typeof price === 'string' ? Number(price) : price;
+
+                        // Validaciones de esquema
+                        const missing = [];
+                        if (!id) missing.push('id');
+                        if (!name) missing.push('name');
+                        if (price === undefined || price === null || Number.isNaN(Number(price))) missing.push('price');
+                        if (!category) missing.push('category');
+                        if (!currency) missing.push('currency');
+                        if (missing.length) {
+                            result.invalidItems++; result.errors.push(`Fila ${row}: faltan campos requeridos (${missing.join(', ')}).`); return;
+                        }
+
+                        // Tipos y valores
+                        const numericPrice = Number(price);
+                        if (!Number.isFinite(numericPrice) || numericPrice < 0) {
+                            result.invalidItems++; result.errors.push(`Fila ${row}: price inválido (${price}).`); return;
+                        }
+                        if (!allowedCurrencies.has(currency)) {
+                            result.warnings.push(`Fila ${row}: currency desconocida (${currency}), se dejará tal cual.`);
+                        }
+                        if (photo) {
+                            if (!(photo.startsWith('data:image/'))) {
+                                result.warnings.push(`Fila ${row}: photo ignorada (formato no soportado).`);
+                                photo = undefined;
+                            }
+                        }
+
+                        // Duplicados en el archivo
+                        if (seenIds.has(id)) {
+                            result.duplicatesInFile++; result.errors.push(`Fila ${row}: id duplicado dentro del archivo (${id}).`); return;
+                        }
+                        seenIds.add(id);
+
+                        // Inserción/Actualización
+                        const idxExisting = products.findIndex((p) => p.id === id);
+                        let photoKey;
+                        if (photo) {
+                            try { photoKey = await saveImageFromDataURL(photo); } catch (e) { result.warnings.push(`Fila ${row}: no se pudo guardar la foto en IndexedDB.`); }
+                        }
+                        if (idxExisting >= 0) {
+                            const current = products[idxExisting];
+                            products[idxExisting] = { id, name, brand, price: numericPrice, category, currency, photoKey: photoKey !== undefined ? photoKey : current.photoKey };
+                            result.updated++;
+                        } else {
+                            products.push({ id, name, brand, price: numericPrice, category, currency, photoKey });
+                            result.created++;
+                        }
+                        result.processed++;
+                    }
+
+                    saveProducts();
+                    // await cleanupOrphanImages(); // Diferido si hay posibilidad de deshacer
+                    refreshUI();
+
+                    const summary = [
+                        `Procesados: ${result.processed}`,
+                        `Creados: ${result.created}`,
+                        `Actualizados: ${result.updated}`,
+                        `Omitidos: ${result.skipped}`,
+                        `Inválidos: ${result.invalidItems}`,
+                        `Duplicados en archivo: ${result.duplicatesInFile}`,
+                        result.errors.length ? `Errores:\n- ${result.errors.slice(0,10).join('\n- ')}` : null,
+                        result.warnings.length ? `Advertencias:\n- ${result.warnings.slice(0,10).join('\n- ')}` : null,
+                    ].filter(Boolean).join('\n');
+
+                    if (importMode === 'replace' && backupProducts.length > 0) {
+                        alert(`Importación completa.\n\n${summary}`);
+                        showToast('Importación completada (Reemplazo)', 'success', 5000, {
+                            text: 'Deshacer',
+                            callback: () => {
+                                products = backupProducts;
+                                saveProducts();
+                                refreshUI();
+                                showToast('Importación deshecha', 'info');
+                            }
+                        });
+                    } else {
+                        alert(`Importación completa.\n\n${summary}`);
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert('Archivo inválido. Asegúrate de seleccionar un JSON válido.');
+                } finally {
+                    importFileInput.value = '';
+                }
+            });
+        
+
+        // Persistencia de filtros
+        function saveFiltersToStorage() {
+            const uiState = {
+                // No guardamos filtros para que se limpien al recargar
+                pageSize: pageSize,
+                filtersOpen: false
+            };
+            localStorage.setItem('uiState', JSON.stringify(uiState));
+            // Persist sort menu state separately
+            saveSortState();
+        }
+
+        function renderCategorySuggestions(value, { forceOpen = false } = {}) {
+            const list = document.getElementById('category-filter-suggestions');
+            if (!list) return;
+            const available = (categoryFilter.__availableCategories || []).filter(Boolean);
+            const collator = new Intl.Collator('es', { sensitivity: 'base', numeric: true });
+            // Normalizar consulta para ignorar acentos y mayúsculas
+            const q = (value || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            list.innerHTML = '';
+
+            // Mostrar lista solo si se forzó o el input tiene el foco
+            const shouldOpen = forceOpen || document.activeElement === categoryFilter;
+            if (!shouldOpen) { list.classList.add('hidden'); return; }
+
+            let matches;
+            if (!q) {
+                // Sin consulta: mostrar todas las categorías
+                matches = [...available].sort((a, b) => collator.compare(a, b));
+            } else {
+                matches = available
+                    .filter(v => (v || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(q))
+                    .sort((a, b) => collator.compare(a, b));
+            }
+
+            if (matches.length === 0) {
+                const div = document.createElement('div');
+                div.className = 'p-2 text-sm text-slate-500';
+                div.textContent = 'No hay coincidencias';
+                list.appendChild(div);
+                list.classList.remove('hidden');
+                return;
+            }
+
+            const catTokens = tokenizeQuery(value || '');
+            matches.forEach(m => {
+                const item = document.createElement('div');
+                item.className = 'p-2 hover:bg-slate-100 cursor-pointer text-sm';
+                item.innerHTML = catTokens.length ? highlightMatches(m, catTokens) : escapeHTML(m);
+                item.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    categoryFilter.value = m;
+                    list.classList.add('hidden');
+                    currentPage = 1;
+                    applyFiltersAndSort();
+                });
+                list.appendChild(item);
+            });
+            list.classList.remove('hidden');
+        }
+
+        function renderBrandList() {
+            // Deprecated: la lista ahora se muestra en el modal; esta función ya no se usa.
+        }
+
+        // Brand modal helpers
+        function openBrandModal() {
+            if (!brandModal) return;
+            // Pre-cargar el término con el filtro actual
+            const current = (searchBrandInput?.value || '').trim();
+            brandModalSearch.value = current;
+            renderBrandModalList(current);
+            brandModal.classList.add('is-open');
+            lockBodyScroll();
+            lastFocusedElement = document.activeElement;
+            requestAnimationFrame(() => brandModalSearch.focus());
+            removeTrapFn = trapFocus(brandModal);
+        }
+        function closeBrandModal() {
+            if (!brandModal) return;
+            brandModal.classList.remove('is-open');
+            brandModalSearch.value = '';
+            unlockBodyScroll();
+            brandModalList.innerHTML = '';
+            removeTrapFn();
+            if (lastFocusedElement) lastFocusedElement.focus();
+        }
+        function renderBrandModalList(query) {
+            if (!brandModalList) return;
+            const norm = (s) => (s || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            const q = norm(query || '');
+            const collator = new Intl.Collator('es', { sensitivity: 'base', numeric: true });
+            const brands = [...new Set(products.map(p => (p.brand || '').trim()).filter(Boolean))]
+                .sort((a,b) => collator.compare(a, b))
+                .filter(b => !q || norm(b).includes(q));
+            brandModalList.innerHTML = '';
+            if (brands.length === 0) {
+                const div = document.createElement('div');
+                div.className = 'p-3 text-sm text-slate-500';
+                div.textContent = 'No hay coincidencias';
+                brandModalList.appendChild(div);
+                return;
+            }
+            const tokens = tokenizeQuery(query || '');
+            brands.forEach(b => {
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = 'w-full text-left p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-sm';
+                item.innerHTML = tokens.length ? highlightMatches(b, tokens) : escapeHTML(b);
+                item.addEventListener('click', () => {
+                    if (searchBrandInput) searchBrandInput.value = b;
+                    updateBrandSelectedLabel();
+                    currentPage = 1; applyFiltersAndSort();
+                    closeBrandModal();
+                });
+                brandModalList.appendChild(item);
+            });
+        }
+
+        // Utilidades de imagen
+        function resizeImageFile(file, maxDim = 800, quality = 0.85) {
+            return new Promise((resolve, reject) => {
+                if (!(file && file.type && file.type.startsWith('image/'))) {
+                    return reject(new Error('Archivo no es una imagen'));
+                }
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let { width, height } = img;
+                        if (width > height) {
+                            if (width > maxDim) { height = Math.round(height * (maxDim / width)); width = maxDim; }
+                        } else {
+                            if (height > maxDim) { width = Math.round(width * (maxDim / height)); height = maxDim; }
+                        }
+                        canvas.width = width; canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        try {
+                            const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                            resolve(dataUrl);
+                        } catch (err) { reject(err); }
+                    };
+                    img.onerror = reject;
+                    img.src = reader.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+    function restoreFiltersFromStorage() {
+            try {
+                const raw = localStorage.getItem('uiState');
+                if (!raw) return;
+                const st = JSON.parse(raw);
+                
+                // Solo restaurar preferencias de visualización (tamaño de página)
+                if (st.pageSize) { pageSize = Number(st.pageSize) || 10; if (pageSizeSelect) pageSizeSelect.value = String(pageSize); }
+                
+                // NOTA: Ya no limpiamos los filtros aquí para mantener el estado al editar/guardar.
+                // La limpieza solo ocurrirá si el usuario explícitamente limpia los filtros o recarga la página (F5).
+                // Si se desea limpiar al recargar, se debería hacer en initialize() o similar, pero refreshUI() se llama tras editar.
+                
+                // Force filters closed on load to ensure the panel is always collapsed by default
+                // Solo si es la carga inicial (podríamos detectar si es refreshUI vs initialize, pero por ahora lo dejamos así
+                // o lo condicionamos). Para evitar cerrar el panel si el usuario lo tenía abierto al editar, podríamos guardar ese estado también.
+                // Por simplicidad, mantenemos el comportamiento de colapsar el panel de filtros avanzados, pero NO borramos los valores de los inputs.
+                
+                // filterGrid.classList.add('max-h-0');
+                // filterGrid.classList.remove('max-h-96');
+                // filterGrid.classList.remove('max-h-[80vh]');
+                // filterGrid.classList.remove('overflow-y-auto');
+                // filterGrid.classList.add('overflow-hidden');
+                // filterChevron.classList.remove('rotate-180');
+                // if (toggleFiltersBtn) toggleFiltersBtn.setAttribute('aria-expanded', 'false');
+            } catch {}
+        }
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js')
+                    .then((reg) => {
+                        console.log('Service Worker registrado');
+                        if (reg.waiting) updateAppBtn.classList.remove('hidden');
+                        reg.addEventListener('updatefound', () => {
+                            const nw = reg.installing;
+                            if (!nw) return;
+                            nw.addEventListener('statechange', () => {
+                                if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+                                    updateAppBtn.classList.remove('hidden');
+                                }
+                            });
+                        });
+                    })
+                    .catch(err => console.error('Error al registrar SW', err));
+
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    updateAppBtn.classList.add('hidden');
+                });
+            }
+        };
+
+        // Migración: mover fotos base64 existentes a IndexedDB y dejar solo photoKey
+        async function migratePhotosToIndexedDBIfNeeded() {
+            const hasLegacy = products.some(p => typeof p.photo === 'string' && p.photo.startsWith('data:image/'));
+            if (!hasLegacy) return;
+            let changed = false;
+            for (const p of products) {
+                if (p.photo && typeof p.photo === 'string' && p.photo.startsWith('data:image/')) {
+                    try {
+                        const key = await saveImageFromDataURL(p.photo);
+                        if (key) { p.photoKey = key; delete p.photo; changed = true; }
+                    } catch (e) { console.warn('Migración foto fallida para', p.id, e); }
+                }
+            }
+            if (changed) saveProducts();
+            await cleanupOrphanImages();
+        }
+
+        // PWA install flow
+        let deferredPrompt = null;
+        // Mostrar botón de instalar solo si hay prompt y no está instalado
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            if (installBtn) installBtn.classList.remove('hidden');
+            if (menuBottomInstall) menuBottomInstall.classList.remove('hidden');
+        });
+        // Ocultar si ya está instalada
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        if (isStandalone) {
+            if (installBtn) installBtn.classList.add('hidden');
+            if (menuBottomInstall) menuBottomInstall.classList.add('hidden');
+        }
+        // Al instalar, ocultar botones definitivamente
+        window.addEventListener('appinstalled', () => {
+            if (installBtn) installBtn.classList.add('hidden');
+            if (menuBottomInstall) menuBottomInstall.classList.add('hidden');
+            deferredPrompt = null;
+            try { showToast('Aplicación instalada', 'success'); } catch {}
+        });
+        installBtn.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            installBtn.disabled = true;
+            try {
+                await deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log('PWA install', outcome);
+            } finally {
+                deferredPrompt = null;
+                if (installBtn) installBtn.classList.add('hidden');
+                if (menuBottomInstall) menuBottomInstall.classList.add('hidden');
+                installBtn.disabled = false;
+            }
+        });
+        
+        initialize();
+    });
+    </script>
+</body>
+</html>
+
